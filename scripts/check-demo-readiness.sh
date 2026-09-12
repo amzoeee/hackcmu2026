@@ -36,7 +36,7 @@ if solana program show "$PROGRAM_ID" --url "$RPC_URL" --keypair "$DEPLOYER_KEYPA
 else
   echo "Program deployed: no"
   echo "Fund the deployer, then run npm run anchor:deploy:devnet."
-  echo "The current program build needs roughly 1.15 SOL to deploy."
+  echo "The current optimized program build needs roughly 0.9 SOL to deploy."
   READY=false
 fi
 

@@ -138,7 +138,7 @@ The frontend uses **devnet**. Automated program tests use **localnet**, a tempor
 
 ## Devnet deployment
 
-1. Fund the address printed by `npm run demo:check` with at least 1.15 devnet SOL for the current program build. Keep another 0.6 SOL if the host will fund two guest wallets.
+1. Fund the address printed by `npm run demo:check` with at least 0.9 devnet SOL for the current optimized program build. Keep another 0.6 SOL if the host will fund two guest wallets; 1.5 SOL total covers both jobs.
 2. Run `npm run anchor:deploy:devnet`.
 3. Run `npm run demo:check` again and require `Demo ready: yes`.
 4. Put the same deployed program address in `Anchor.toml` and regenerate the IDL with `npm run anchor:build` if it changes.
@@ -147,5 +147,6 @@ The frontend uses **devnet**. Automated program tests use **localnet**, a tempor
 
 ## Known setup notes
 
+- The release profile is optimized for size, and the program builds as `cdylib` only. This keeps the current deployable at about 172 KB and lowers its devnet rent requirement without changing its API.
 - The installed macOS Solana tools can print an “undefined and not known syscalls” build warning because their syscall-name list is empty. The scaffold's local transaction test passes despite that warning.
 - `npm audit` still reports upstream advisories in the Anchor/web3.js dependency chain (`toml`, `stream-json`, and `uuid`). Compatible fixes were applied; npm currently provides no compatible fix for the remaining advisories.
