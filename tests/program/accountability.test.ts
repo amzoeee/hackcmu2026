@@ -1199,7 +1199,7 @@ describe("accountability pots", () => {
     const noInstructions = await Promise.all(
       pots.map((pot) =>
         program.methods
-          .joinPot({ no: {} })
+          .joinPot({ no: {} }, null)
           .accountsPartial({
             participant: organizer.publicKey,
             pot,

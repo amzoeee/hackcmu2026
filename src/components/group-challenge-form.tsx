@@ -484,7 +484,8 @@ export function GroupChallengeForm({
       const joinInstructions = await Promise.all(
         missingJoins.map((entry) =>
           program.methods
-            .joinPot({ no: {} })
+            // Group pots are shared by link, not gated by an invite code.
+            .joinPot({ no: {} }, null)
             .accountsPartial({
               participant: wallet.publicKey,
               pot: new PublicKey(entry.pot),
