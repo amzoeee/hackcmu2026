@@ -418,6 +418,7 @@ export function SolaraApp({
   async function connect() {
     setError(null);
     setNotice(null);
+    setSignature(null);
     setPending("connect");
     try {
       await onConnect();
@@ -448,6 +449,7 @@ export function SolaraApp({
 
   async function copyAddress() {
     if (!address) return;
+    setSignature(null);
     try {
       await navigator.clipboard.writeText(address);
       setNotice("Wallet address copied.");
@@ -480,6 +482,7 @@ export function SolaraApp({
     if (!onRequestFunds) return;
     setError(null);
     setNotice(null);
+    setSignature(null);
     setPending("fund");
     try {
       const message = await onRequestFunds();
@@ -612,7 +615,7 @@ export function SolaraApp({
       const outcome = completed ? "Completed" : "Not completed";
       const payout =
         recipients.length === 0
-          ? "The empty pot is closed."
+          ? "The empty pot is settled."
           : winners.length === 0
             ? "No one chose this side, so every participant received a refund."
             : `${winners.length} ${winners.length === 1 ? "winner has" : "winners have"} been paid.`;
@@ -1211,7 +1214,7 @@ export function SolaraApp({
                       </h4>
                       <p>
                         {participantCount === 0
-                          ? "This pot is empty. It will close without a payout."
+                          ? "This pot is empty. It will settle without a payout."
                           : selectedWinners.length === 0
                             ? `No one chose ${settlement.completed ? "YES" : "NO"}. Every participant will receive their stake back.`
                             : selectedWinners.length === 1

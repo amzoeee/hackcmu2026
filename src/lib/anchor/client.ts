@@ -1,6 +1,7 @@
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
 import type { AnchorWallet } from "@solana/wallet-adapter-react";
 import { Connection, SystemProgram } from "@solana/web3.js";
+import { SOLANA_WS_URL } from "../solana";
 import idl from "./generated/accountability.json";
 import type { Accountability } from "./generated/accountability";
 
@@ -19,7 +20,30 @@ export function getAccountabilityProgram(
   connection: Connection,
   wallet: AnchorWallet,
 ) {
-  const provider = new AnchorProvider(connection, wallet, {
+  const transactionConnection = new Connection(connection.rpcEndpoint, {
+    commitment: "confirmed",
+    wsEndpoint: SOLANA_WS_URL,
+  });
+  const reader = getReadOnlyConnection(connection.rpcEndpoint);
+  transactionConnection.getLatestBlockhash = async (...args) => {
+    try {
+      return await reader.getLatestBlockhash(...args);
+    } catch (cause) {
+      throw new Error(
+        "Could not prepare the transaction. Check your connection and try again.",
+        { cause },
+      );
+    }
+  };
+  transactionConnection.getTransaction = async (...args) => {
+    try {
+      return await reader.getTransaction(...args);
+    } catch {
+      // Optional logs must not replace Anchor's known confirmation failure.
+      return null;
+    }
+  };
+  const provider = new AnchorProvider(transactionConnection, wallet, {
     commitment: "confirmed",
   });
   return new Program<Accountability>(idl as Accountability, provider);
