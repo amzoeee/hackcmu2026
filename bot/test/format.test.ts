@@ -40,8 +40,16 @@ describe("formatPotEntry", () => {
       /Settled · completed/,
     );
     assert.match(
-      formatPotEntry(fixtures.refund(), context),
+      formatPotEntry(fixtures.forfeit(), context),
       /Settled · not completed/,
+    );
+    assert.match(
+      formatPotEntry(fixtures.timedOut(), context),
+      /Settled · refunded, no verdict/,
+    );
+    assert.match(
+      formatPotEntry(fixtures.refundable(), context),
+      /Closed · judge window expired, refund available/,
     );
   });
 
@@ -79,13 +87,29 @@ describe("formatPotDetails", () => {
     assert.ok(details.endsWith(`\n${APP_URL}/#pot-${pot.address}`));
   });
 
-  it("describes a one-sided refund", () => {
-    const details = formatPotDetails(fixtures.refund(), context);
+  it("describes an unopposed forfeiture to the judge", () => {
+    const details = formatPotDetails(fixtures.forfeit(), context);
     assert.match(details, /Status: Settled · not completed/);
     assert.match(details, /NO \(0\): —/);
     assert.match(
       details,
-      /Payout: No one chose NO, so all 3 participants were refunded 0\.01 SOL each\./,
+      /Payout: This pot was unopposed, so the whole 0\.03 SOL staked pool went to the judge/,
+    );
+  });
+
+  it("describes an unopposed completed pot as a stake refund", () => {
+    assert.match(
+      formatPotDetails(fixtures.unopposedRefund(), context),
+      /Payout: This pot was unopposed, so all 3 participants got their original 0\.01 SOL stake back\./,
+    );
+  });
+
+  it("describes a settlement with no verdict as a timeout refund", () => {
+    const details = formatPotDetails(fixtures.timedOut(), context);
+    assert.match(details, /Status: Settled · refunded, no verdict/);
+    assert.match(
+      details,
+      /Payout: The judge window expired, so all 3 participants got their original 0\.01 SOL stake back, without a verdict\./,
     );
   });
 
@@ -136,10 +160,14 @@ describe("announcements", () => {
     );
   });
 
-  it("announces a one-sided refund and an empty settlement", () => {
+  it("announces a forfeiture, a timeout refund, and an empty settlement", () => {
     assert.match(
-      formatSettledAnnouncement(fixtures.refund(), context),
-      /— Not completed \(NO wins\)\nNo one chose NO, so all 3 participants were refunded 0\.01 SOL each\./,
+      formatSettledAnnouncement(fixtures.forfeit(), context),
+      /— Not completed \(NO wins\)\nThis pot was unopposed, so the whole 0\.03 SOL staked pool went to the judge/,
+    );
+    assert.match(
+      formatSettledAnnouncement(fixtures.timedOut(), context),
+      /— Refunded \(the judge window expired, so no verdict was recorded\)\nThe judge window expired, so all 3 participants got their original 0\.01 SOL stake back/,
     );
     assert.match(
       formatSettledAnnouncement(fixtures.empty(), context),
@@ -167,7 +195,12 @@ describe("formatPotList", () => {
       const view = formatPotListView(pots, "all", context, 0);
       assert.ok(view);
       assert.equal(view.embed.data.title, "Present Solara's live devnet demo");
-      assert.equal(view.embed.data.fields?.find((field) => field.name === "Participants")?.value.includes("YES 2"), true);
+      assert.equal(
+        view.embed.data.fields
+          ?.find((field) => field.name === "Participants")
+          ?.value.includes("YES 2"),
+        true,
+      );
       const buttons = view.components[0]?.components.map((button) =>
         "custom_id" in button.data ? button.data.custom_id : undefined,
       );

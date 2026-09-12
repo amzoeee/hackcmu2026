@@ -29,11 +29,31 @@ describe("computePayout", () => {
     assert.equal(payout.kind === "winners" && payout.perWinner, 30_000_000n);
   });
 
-  it("refunds every participant their stake when the winning side is empty", () => {
-    const pot = fixtures.refund();
+  it("forfeits an unopposed incomplete pot to the judge", () => {
+    const pot = fixtures.forfeit();
     assert.deepEqual(computePayout(pot, false), {
+      kind: "forfeit",
+      pool: 3n * pot.stake,
+      judge: pot.judge,
+    });
+  });
+
+  it("returns exact stakes for an unopposed completed pot", () => {
+    const pot = fixtures.unopposedRefund();
+    assert.deepEqual(computePayout(pot, true), {
       kind: "refund",
-      side: "NO",
+      reason: "unopposed",
+      pool: 3n * pot.stake,
+      participants: 3,
+      perParticipant: pot.stake,
+    });
+  });
+
+  it("returns exact stakes when no verdict was recorded", () => {
+    const pot = fixtures.timedOut();
+    assert.deepEqual(computePayout(pot, null), {
+      kind: "refund",
+      reason: "timeout",
       pool: 3n * pot.stake,
       participants: 3,
       perParticipant: pot.stake,
@@ -93,10 +113,23 @@ describe("potStatus", () => {
       kind: "settled",
       outcome: true,
     });
-    assert.deepEqual(potStatus(fixtures.refund(), NOW_SECONDS), {
+    assert.deepEqual(potStatus(fixtures.forfeit(), NOW_SECONDS), {
       kind: "settled",
       outcome: false,
     });
+    assert.deepEqual(potStatus(fixtures.timedOut(), NOW_SECONDS), {
+      kind: "settled",
+      outcome: null,
+    });
+    assert.deepEqual(potStatus(fixtures.refundable(), NOW_SECONDS), {
+      kind: "refundable",
+    });
+  });
+
+  it("holds the judge's window open through the clock-drift allowance", () => {
+    const pot = makePot({ deadline: NOW_SECONDS - 305 });
+    assert.equal(potStatus(pot, NOW_SECONDS).kind, "closed");
+    assert.equal(potStatus(pot, NOW_SECONDS + 5).kind, "refundable");
   });
 
   it("keeps a pot active through the app's clock-drift allowance", () => {

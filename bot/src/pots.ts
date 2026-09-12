@@ -6,6 +6,8 @@ export const MAX_PARTICIPANTS = 10;
  * the bot reports a pot as closed on the same schedule.
  */
 export const CLOCK_DRIFT_SECONDS = 10;
+/** Mirrors SETTLEMENT_GRACE_SECONDS: the judge's window after the deadline. */
+export const SETTLEMENT_GRACE_SECONDS = 300;
 export const LAMPORTS_PER_SOL = 1_000_000_000n;
 
 /** A pot account in plain values, decoded from the program's IDL. */
@@ -32,7 +34,10 @@ export type PotFilter = "active" | "settled" | "all";
 export type PotStatus =
   | { kind: "active"; full: boolean }
   | { kind: "closed" }
-  | { kind: "settled"; outcome: boolean };
+  /** Unsettled past the judge's window, so anyone can refund every stake. */
+  | { kind: "refundable" }
+  /** A null outcome is a timeout refund: settled without a verdict. */
+  | { kind: "settled"; outcome: boolean | null };
 
 export type Payout =
   | { kind: "empty"; pool: bigint }
@@ -45,18 +50,24 @@ export type Payout =
     }
   | {
       kind: "refund";
-      side: "YES" | "NO";
+      reason: "unopposed" | "timeout";
       pool: bigint;
       participants: number;
       perParticipant: bigint;
-    };
+    }
+  | { kind: "forfeit"; pool: bigint; judge: string };
 
 export function participantCount(pot: Pot) {
   return pot.yesParticipants.length + pot.noParticipants.length;
 }
 
 export function potStatus(pot: Pot, nowSeconds: number): PotStatus {
-  if (pot.settled) return { kind: "settled", outcome: pot.outcome === true };
+  if (pot.settled) return { kind: "settled", outcome: pot.outcome };
+  if (
+    pot.deadline + SETTLEMENT_GRACE_SECONDS + CLOCK_DRIFT_SECONDS <=
+    nowSeconds
+  )
+    return { kind: "refundable" };
   if (pot.deadline + CLOCK_DRIFT_SECONDS <= nowSeconds)
     return { kind: "closed" };
   return { kind: "active", full: participantCount(pot) >= MAX_PARTICIPANTS };
@@ -93,24 +104,38 @@ export function sortOldestFirst(pots: Pot[]) {
  * side, refunded to everyone when that side is empty, and nothing for an empty
  * pot. Division dust stays in the pot.
  */
+/** Mirrors settle_pot and refund_pot. A null outcome is the timeout refund. */
 export function computePayout(
-  pot: Pick<Pot, "stake" | "yesParticipants" | "noParticipants">,
-  completed: boolean,
+  pot: Pick<Pot, "stake" | "judge" | "yesParticipants" | "noParticipants">,
+  outcome: boolean | null,
 ): Payout {
   const participants = pot.yesParticipants.length + pot.noParticipants.length;
   const pool = pot.stake * BigInt(participants);
   if (participants === 0) return { kind: "empty", pool };
-  const side = completed ? "YES" : "NO";
-  const winners = completed ? pot.yesParticipants : pot.noParticipants;
-  if (winners.length === 0) {
+  // Exact original stakes are returned; extra SOL and dust stay in the pot.
+  if (outcome === null)
     return {
       kind: "refund",
-      side,
+      reason: "timeout",
       pool,
       participants,
-      perParticipant: pool / BigInt(participants),
+      perParticipant: pot.stake,
     };
+  const unopposed =
+    pot.yesParticipants.length === 0 || pot.noParticipants.length === 0;
+  if (unopposed) {
+    return outcome
+      ? {
+          kind: "refund",
+          reason: "unopposed",
+          pool,
+          participants,
+          perParticipant: pot.stake,
+        }
+      : { kind: "forfeit", pool, judge: pot.judge };
   }
+  const side = outcome ? "YES" : "NO";
+  const winners = outcome ? pot.yesParticipants : pot.noParticipants;
   return {
     kind: "winners",
     side,

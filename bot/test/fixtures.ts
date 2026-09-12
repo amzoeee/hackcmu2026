@@ -55,13 +55,41 @@ export const fixtures = {
       yesParticipants: [wallet(1), wallet(3)],
       noParticipants: [wallet(4)],
     }),
-  refund: () =>
+  /** Unopposed and judged incomplete: the program pays the judge. */
+  forfeit: () =>
     makePot({
       task: "Run 5k before Friday",
       deadline: NOW_SECONDS - 600,
       settled: true,
       outcome: false,
       yesParticipants: [wallet(1), wallet(3), wallet(5)],
+    }),
+  /** Unopposed and judged complete: every stake goes back. */
+  unopposedRefund: () =>
+    makePot({
+      task: "Read one paper a day",
+      deadline: NOW_SECONDS - 600,
+      settled: true,
+      outcome: true,
+      yesParticipants: [wallet(1), wallet(3), wallet(5)],
+    }),
+  /** Settled with no verdict, which only the timeout refund produces. */
+  timedOut: () =>
+    makePot({
+      task: "Rewrite the onboarding copy",
+      deadline: NOW_SECONDS - 900,
+      settled: true,
+      outcome: null,
+      yesParticipants: [wallet(1), wallet(3)],
+      noParticipants: [wallet(4)],
+    }),
+  /** Unsettled past the judge's window, so anyone can refund it. */
+  refundable: () =>
+    makePot({
+      task: "Nobody judged this in time",
+      deadline: NOW_SECONDS - 400,
+      yesParticipants: [wallet(1)],
+      noParticipants: [wallet(4)],
     }),
   empty: () =>
     makePot({
