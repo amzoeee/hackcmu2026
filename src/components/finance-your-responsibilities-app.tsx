@@ -44,7 +44,7 @@ type PotAccount = {
 
 type Pot = PotAccount & { publicKey: PublicKey };
 
-type SolaraAppProps = {
+type FinanceYourResponsibilitiesAppProps = {
   connection: Connection;
   wallet?: AnchorWallet;
   address?: string;
@@ -188,7 +188,7 @@ function actionError(error: unknown) {
   return "The transaction could not be completed. Please try again.";
 }
 
-export function SolaraApp({
+export function FinanceYourResponsibilitiesApp({
   connection,
   wallet,
   address,
@@ -198,7 +198,7 @@ export function SolaraApp({
   secondaryConnect,
   connectLabel,
   walletLabel,
-}: SolaraAppProps) {
+}: FinanceYourResponsibilitiesAppProps) {
   const [pots, setPots] = useState<Pot[]>([]);
   const [loadingPots, setLoadingPots] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);

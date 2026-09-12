@@ -1,4 +1,4 @@
-# Solara — accountability staking
+# Finance your Responsibilities
 
 A prototype where a trusted group stakes test SOL on whether someone completes a task. A named judge settles after the deadline, and winners receive the pot in one transaction.
 
@@ -117,11 +117,13 @@ GitHub checks each push and pull request with a clean install, frontend checks, 
 
 Keep the standalone TypeScript check: Next's built-in checker is disabled because this Next/TypeScript combination rejects valid compiler configuration output. Upstream wallet SDK dependencies still have npm audit findings; do not use forced dependency upgrades without validating wallet behavior.
 
+The app is named **Finance your Responsibilities**. The `solara.*` browser storage keys and `SOLARA_DEMO_FUNDER_KEYPAIR` environment variable retain their original identifiers so existing wallets, sign-out preferences, and funding configurations continue to work. The deployed `accountability` program identity is unchanged. Verification records preserve task text as it was recorded on-chain under the former name.
+
 ## Project map
 
 | Area                                        | Location                                                                     |
 | ------------------------------------------- | ---------------------------------------------------------------------------- |
-| One-page UI and transaction flow            | `src/components/solara-app.tsx`                                              |
+| One-page UI and transaction flow            | `src/components/finance-your-responsibilities-app.tsx`                                              |
 | Wallet selection and providers              | `src/components/wallet-experience.tsx`, `src/components/wallet-provider.tsx` |
 | Browser demo keys and network configuration | `src/lib/demo-wallet.ts`, `src/lib/solana.ts`                                |
 | Test SOL funding endpoint                   | `src/app/api/demo-funds/route.ts`                                            |
