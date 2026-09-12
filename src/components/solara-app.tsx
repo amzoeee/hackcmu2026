@@ -1302,9 +1302,11 @@ export function SolaraApp({
                         {sharedPot.copied
                           ? "Copied to your clipboard."
                           : "Select and copy this link."}{" "}
-                        {sharedPot.local
-                          ? "Open it in another browser profile on this computer. For other devices, open the host's LAN address before sharing."
-                          : "Anyone with this link can view the pot."}
+                        {IS_LOCALNET
+                          ? "Open this local rehearsal in another browser profile on this computer."
+                          : sharedPot.local
+                            ? "Open it in another browser profile on this computer. For other devices, open the host's LAN address before sharing."
+                            : "Anyone with this link can view the pot."}
                       </p>
                     </div>
                   ) : null}

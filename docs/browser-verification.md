@@ -51,6 +51,8 @@ A controlled RPC proxy delayed reads by ten seconds, then stopped answering, the
 
 The compiled production app also passed the full two-profile flow on localnet with fresh browser wallets. Both began with 0.25 SOL. After creation and a YES stake, A held 0.23493008 SOL; B held 0.239995 SOL after joining NO. A settled Completed and finished with 0.25492508 SOL, receiving the 0.02 SOL pool less the settlement fee. Both profiles displayed the settled result automatically, and neither browser reported console warnings or errors during the flow.
 
+Opening the production devnet page through the host's HTTP LAN address verified browser-wallet creation, restoration after reload, and the manual address-copy fallback when clipboard access was unavailable. This check used the same computer and a disabled test funder; a second physical device and the full devnet staking flow remain unverified.
+
 ## Local ledger identifiers
 
 - Wallet A: `4h7yKVVWgYqkLcGoGLzXSFmQVpyDBzh1LuZvfubgsjdX`
