@@ -12,6 +12,7 @@
     "start": "next start",
     "start:lan": "next start --hostname 0.0.0.0",
     "demo:check": "bash scripts/with-tools.sh bash scripts/check-demo-readiness.sh",
+    "demo:local": "bash scripts/with-tools.sh bash scripts/start-local-demo.sh",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run build",
@@ -22,7 +23,7 @@
     "anchor": "bash scripts/with-tools.sh anchor",
     "anchor:build": "bash scripts/with-tools.sh bash scripts/build-program.sh",
     "anchor:test": "npm run anchor:build && npm run anchor -- test --skip-build --provider.cluster localnet",
-    "anchor:deploy:devnet": "npm run anchor -- deploy --provider.cluster devnet",
+    "anchor:deploy:devnet": "bash scripts/with-tools.sh bash scripts/deploy-devnet.sh",
     "test": "npm run anchor:test",
     "test:anchor": "node --import tsx --test --test-timeout=100000 tests/*.test.ts"
   },

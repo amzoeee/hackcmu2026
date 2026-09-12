@@ -1,27 +1,12 @@
-# Accountability staking app
+# Solara — accountability staking
 
-A devnet app for staking test SOL on whether someone completes a task.
+A prototype where a trusted group stakes test SOL on whether someone completes a task. A named judge settles after the deadline, and winners receive the pot in one transaction.
 
-**What works now:** create a pot, join YES or NO, and have the named judge settle it after the deadline. Payouts, refunds when the winning side is empty, and rent preservation are enforced on-chain. Pot state and balances refresh automatically across multiple browsers.
+The on-chain program and the complete two-browser flow have passed on a local Solana validator. **Devnet presentation verification is still pending:** the deployer needs test SOL before the program can be deployed. Run `npm run demo:check` for the current addresses, balances, and readiness. The [browser verification record](docs/browser-verification.md) contains the observed local payouts.
 
-Without any account configuration, each browser profile gets its own persistent, devnet-only demo wallet and can request test SOL in the page. The app also supports passwordless email/Google onboarding through optional Privy configuration, and users can connect an existing Solana wallet.
+## Setup
 
-## 1. Install these first
-
-- **Node.js 24 LTS**, which includes **npm**. Download it from [nodejs.org](https://nodejs.org/). Node 22 or newer is supported; this scaffold was tested with Node 26.
-- **On a Mac: Xcode Command Line Tools.** Open Terminal and run `xcode-select --install`. If it says they are already installed, you are ready.
-- **Optional Privy onboarding:** create a Privy app and enable email and Google login. Add its public app ID to `.env.local` as `NEXT_PUBLIC_PRIVY_APP_ID`. A wallet is then created automatically after login. Add every LAN origin you plan to use to the Privy app's allowed origins.
-- **For the fallback wallet connection:** install [Phantom](https://phantom.com/) or [Solflare](https://solflare.com/) and switch it to **Solana devnet**.
-
-You do **not** need to install Rust, Solana, or Anchor manually. The setup command below installs them for this project.
-
-You do **not** need a database, Docker, a separate backend, or real SOL.
-
-## 2. Set up the project
-
-Open a terminal **inside this project folder**.
-
-For a new checkout or another computer, run these commands in order:
+Use Node.js 22 or newer and npm. On macOS, install Xcode Command Line Tools with `xcode-select --install` if needed. Linux needs native compiler and linker tools.
 
 ```sh
 npm ci
@@ -29,124 +14,96 @@ npm run tools:setup
 npm run anchor:build
 ```
 
-What they do:
+The setup installs the project's Rust, Solana, and Anchor tools into ignored local folders. First-time setup needs internet access. The lockfile uses Solana Kit 5 to satisfy Privy's peer dependencies; ordinary `npm ci` works without dependency overrides.
 
-| Command                | What it does                                                                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm ci`               | Installs the JavaScript dependencies from the lockfile: Next.js, React, TypeScript, wallet adapters, the Anchor client, and development tools.    |
-| `npm run tools:setup`  | Installs Rust, rustfmt, Clippy, Solana CLI 2.3.0, and Anchor 0.32.1 into the ignored `.tools/` folder. Creates local development keys if missing. |
-| `npm run anchor:build` | Builds the Rust program and generates the TypeScript client files. Downloads the compatible Solana compiler tools on the first run.               |
+On a fresh checkout, restore the existing program key to `.wallets/accountability-program.json` before building. To intentionally create an independent program address when no program key is present, run `npm run tools:setup -- --new-program`, then build. Setup and builds preserve existing keys and reject mismatched addresses.
 
-**This setup has already been completed on this computer. You can go straight to step 3.** First-time setup on another computer needs internet access and can take several minutes. The installer supports macOS and x86_64 Linux; Linux also needs native compiler/linker tools installed.
+No database, Docker, separate backend, wallet extension, or real SOL is required for the local rehearsal.
 
-To check that the tools are available:
+## Rehearse the full flow locally
 
 ```sh
-npm run tools:check
+npm run demo:local
 ```
 
-## 3. Run the app
+Open [http://localhost:3001](http://localhost:3001) in two separate browser profiles. The command starts an isolated local validator with the built program and a local-only web server. It uses its own build directory and does not change devnet environment settings. Press **Ctrl+C** to stop both processes and discard the temporary ledger; pots reset on the next run.
+
+1. In each profile, click **Start demo**. Each wallet receives 0.25 local test SOL.
+2. In profile A, enter a task, use a 0.01 SOL stake and a short deadline, and leave the judge blank to judge it yourself. Create the pot.
+3. A joins **YES**. B joins **NO** on the same pot. Both balances decrease by the stake plus a small fee.
+4. After the deadline, A selects **Completed**, reviews the payout, and confirms settlement. A receives the 0.02 SOL pool; both browsers show the settled result automatically.
+
+Localnet wallets use separate browser storage from devnet wallets. Local funding only works with an explicitly configured localnet and a loopback RPC, and it ignores any devnet funder key. Privy and wallet-extension onboarding remain devnet-only. Local rehearsal does not replace the final devnet check.
+
+Browser keys survive a local restart, so use the page's test-SOL action to fund restored wallets on the new chain.
+
+## Run and present on devnet
 
 ```sh
 npm run dev
 ```
 
-Open **[http://localhost:3000](http://localhost:3000)** in your browser. Leave the terminal running. Press **Ctrl+C** in that terminal to stop the server.
+Open [http://localhost:3000](http://localhost:3000). The public devnet RPC is the default; no environment file is required. **Start demo** creates a persistent wallet in that browser profile and requests 0.25 devnet SOL. Signing out preserves the key, and signing back in restores the same wallet. Two ordinary tabs in one profile share a wallet; use separate profiles or devices for separate participants.
 
-Without `NEXT_PUBLIC_PRIVY_APP_ID`, click **Start demo**. Solara creates a devnet-only key in that browser and asks the devnet faucet for 0.25 SOL. The key persists in local storage, so separate browser profiles and LAN devices behave as separate users. No extension, account, or seed phrase is required. **Use wallet extension** remains available as a secondary path.
+The page includes quick deadlines, pot filters, wallet-address copying, transaction links, and a payout review before settlement. Pot state comes directly from the program, including before login, and pots and balances refresh every eight seconds. Creating a pot pays account rent and a network fee; the creator stakes separately. Tasks are limited to **160 UTF-8 bytes**, and each pot allows at most 10 participants at one fixed stake.
 
-If the public faucet is rate-limited, fund `.wallets/deployer.json` and set `SOLARA_DEMO_FUNDER_KEYPAIR=.wallets/deployer.json` in `.env.local`. The server will transfer 0.25 devnet SOL to low-balance demo wallets. This route is hard-gated to devnet, and the private key stays on the host. Never configure it with a mainnet keypair.
-
-No environment file is required. The app uses the public devnet RPC by default. If you later need a different devnet RPC, copy `.env.example` to `.env.local`, change `NEXT_PUBLIC_SOLANA_RPC_URL` and `NEXT_PUBLIC_SOLANA_WS_URL`, and restart the server. A keypair path is safe to put there because `.env.local` is ignored; never put the private-key contents in a `NEXT_PUBLIC_` variable.
-
-## Run with multiple people on the LAN
-
-Check the host before inviting participants:
+Before presenting:
 
 ```sh
 npm run demo:check
+# Fund the deployer printed by the check, then:
+npm run anchor:deploy:devnet
+npm run demo:check
 ```
 
-The check confirms the configured program is deployed, prints the deployer balance, warns if the guest-funding reserve is low, and prints the LAN URL when it can detect one.
+The current optimized program needs roughly 0.9 devnet SOL to deploy. Allow about 1.5 SOL total if that wallet will also fund two participants. Deployment rebuilds the program and verifies its key, configuration, and generated client addresses first. The readiness check requires a configured host funder with at least 0.6 SOL in reserve because public faucet availability cannot be verified. Require `Demo ready: yes`, fund both participant wallets in advance, and repeat the two-profile flow above on devnet.
 
-Start a development server that listens on every network interface:
+If the public faucet is rate-limited, set a funded, server-only devnet keypair in `.env.local`:
+
+```sh
+SOLARA_DEMO_FUNDER_KEYPAIR=.wallets/deployer.json
+```
+
+The funding route adds 0.25 test SOL to low-balance wallets and checks transaction confirmation. Never use a mainnet keypair or put private-key contents in a `NEXT_PUBLIC_` variable. See `.env.example` for custom devnet RPC and WebSocket settings; restart the server after changes.
+
+For email or Google login, configure a Privy app and set `NEXT_PUBLIC_PRIVY_APP_ID`. Enable the desired login methods and allow the origins used for the demo. Without Privy, the built-in browser wallet and **Use wallet extension** are available. Extensions must use devnet.
+
+For participants on the same LAN:
 
 ```sh
 npm run dev:lan
-```
-
-Find the host computer's LAN address, then have each participant open `http://HOST_IP:3000`. For example, a host at `192.168.1.24` shares `http://192.168.1.24:3000`. Allow inbound TCP port 3000 in the host firewall if prompted.
-
-For a steadier production-mode presentation:
-
-```sh
+# Or use a production build:
 npm run build
 npm run start:lan
 ```
 
-Use a separate browser profile or device for each participant. Wallets are scoped to browser storage; two ordinary tabs in one profile intentionally use the same demo wallet.
+Share the host's LAN URL printed by `npm run demo:check` and allow inbound port 3000 if needed. The local rehearsal command stays on loopback; use the devnet server for LAN participation.
 
-## 4. Run the checks and tests
-
-Run these from the project folder. If the dev server is running, use a second terminal.
+## Verify changes
 
 ```sh
-# Check frontend code, TypeScript, and the production build:
-npm run check
-
-# Build the Anchor program and test it on a local Solana validator:
-npm test
+npm run check       # Lint, standalone TypeScript check, production build
+npm test            # Build and test on a temporary local validator
+npm run tools:check # Verify the installed toolchain
 ```
 
-**`npm test` starts and stops its own local validator.** It tests pot creation, duplicate, late, and full-pot joins, unauthorized and early settlement, recipient validation, YES and NO winning payouts, one-sided refunds, repeated settlement, empty pots, and rent/dust preservation.
+Program tests cover creation and exact UTF-8 limits, insufficient funds, duplicate/late/full-pot joins, judge and deadline restrictions, invalid payout recipients, payouts for both sides, one-sided refunds, empty pots, and exact rent/dust preservation. Rejected operations are checked for unchanged balances and state. Browser verification covers the actual create/join/settle flow and recovery controls.
 
-Other useful commands:
+Keep the standalone TypeScript check: Next's built-in checker is disabled because this Next/TypeScript combination rejects valid compiler configuration output. Upstream wallet SDK dependencies still have npm audit findings; do not use forced dependency upgrades without validating wallet behavior.
 
-```sh
-npm run anchor:build   # Rebuild after changing Rust code; updates client types too
-npm run format        # Format JavaScript, TypeScript, CSS, and Markdown
-npm run format:check  # Check formatting without changing files
+## Project map
 
-# Format Rust code:
-bash scripts/with-tools.sh cargo fmt --all
-```
+| Area                                        | Location                                                                     |
+| ------------------------------------------- | ---------------------------------------------------------------------------- |
+| One-page UI and transaction flow            | `src/components/solara-app.tsx`                                              |
+| Wallet selection and providers              | `src/components/wallet-experience.tsx`, `src/components/wallet-provider.tsx` |
+| Browser demo keys and network configuration | `src/lib/demo-wallet.ts`, `src/lib/solana.ts`                                |
+| Test SOL funding endpoint                   | `src/app/api/demo-funds/route.ts`                                            |
+| Styling                                     | `src/app/globals.css`                                                        |
+| Anchor client and generated types           | `src/lib/anchor/`                                                            |
+| On-chain program                            | `programs/accountability/src/lib.rs`                                         |
+| Program tests                               | `tests/accountability.test.ts`                                               |
+| Tooling, deployment, and rehearsal commands | `scripts/`                                                                   |
+| Prototype scope and working instructions    | `AGENTS.md`                                                                  |
 
-The frontend uses **devnet**. Automated program tests use **localnet**, a temporary blockchain running on your computer.
-
-## 5. Which files should I edit?
-
-| What you want to change                           | File                                   |
-| ------------------------------------------------- | -------------------------------------- |
-| Main page selection                               | `src/app/page.tsx`                     |
-| Create-pot form, pot list, and transaction UI     | `src/components/solara-app.tsx`        |
-| Embedded and browser wallet paths                 | `src/components/wallet-experience.tsx` |
-| Colors, spacing, and layout styles                | `src/app/globals.css`                  |
-| App-wide layout and page title                    | `src/app/layout.tsx`                   |
-| Wallet connection setup                           | `src/components/wallet-provider.tsx`   |
-| Anchor client used to call the program            | `src/lib/anchor/client.ts`             |
-| Default Solana RPC endpoint                       | `src/lib/solana.ts`                    |
-| On-chain logic: add create, join, and settle here | `programs/accountability/src/lib.rs`   |
-| Rust dependencies                                 | `programs/accountability/Cargo.toml`   |
-| Program tests                                     | `tests/accountability.test.ts`         |
-| Anchor network, wallet, and program addresses     | `Anchor.toml`                          |
-| JavaScript dependencies and npm commands          | `package.json`                         |
-| Requirements for the finished prototype           | `AGENTS.md`                            |
-
-**Do not edit `src/lib/anchor/generated/` by hand.** Run `npm run anchor:build` after changing the Rust program to regenerate these files. Keep the generated files in Git so the frontend can build without a Rust setup.
-
-**Do not commit `.wallets/`, `.tools/`, or `target/`.** They are already ignored. `.wallets/deployer.json` is the local development wallet; `target/deploy/accountability-keypair.json` determines the program address. Keep that program keypair if you want to keep the same address. A fresh setup generates a new one and synchronizes the configuration.
-
-## Devnet deployment
-
-1. Fund the address printed by `npm run demo:check` with at least 0.9 devnet SOL for the current optimized program build. Keep another 0.6 SOL if the host will fund two guest wallets; 1.5 SOL total covers both jobs.
-2. Run `npm run anchor:deploy:devnet`.
-3. Run `npm run demo:check` again and require `Demo ready: yes`.
-4. Put the same deployed program address in `Anchor.toml` and regenerate the IDL with `npm run anchor:build` if it changes.
-5. Add `NEXT_PUBLIC_PRIVY_APP_ID` to `.env.local`, or use the built-in demo wallets.
-6. Create a short-deadline pot, have two wallets take opposite sides, and settle from the judge wallet after the deadline.
-
-## Known setup notes
-
-- The release profile is optimized for size, and the program builds as `cdylib` only. This keeps the current deployable at about 172 KB and lowers its devnet rent requirement without changing its API.
-- The installed macOS Solana tools can print an “undefined and not known syscalls” build warning because their syscall-name list is empty. The scaffold's local transaction test passes despite that warning.
-- `npm audit` still reports upstream advisories in the Anchor/web3.js dependency chain (`toml`, `stream-json`, and `uuid`). Compatible fixes were applied; npm currently provides no compatible fix for the remaining advisories.
+Run `npm run anchor:build` to regenerate the client after Rust changes; do not edit `src/lib/anchor/generated/` by hand. Keep generated clients in Git so frontend-only installs can build. Never commit `.wallets/`, `.tools/`, or `target/`. Back up `.wallets/accountability-program.json` and the deployer key privately; the copy under `target/deploy/` is restored automatically from the durable program key.

@@ -8,10 +8,10 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-accountability = "4wJH64VGkp4kLPMFGU9p9q2cLKjThDsUaYY2WAJS7jJ9"
+accountability = "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb"
 
 [programs.localnet]
-accountability = "4wJH64VGkp4kLPMFGU9p9q2cLKjThDsUaYY2WAJS7jJ9"
+accountability = "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb"
 
 [registry]
 url = "https://api.apr.dev"

@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/accountability.json`.
  */
 export type Accountability = {
-  "address": "4wJH64VGkp4kLPMFGU9p9q2cLKjThDsUaYY2WAJS7jJ9",
+  "address": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
   "metadata": {
     "name": "accountability",
     "version": "0.1.0",

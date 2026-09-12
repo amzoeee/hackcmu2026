@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Local-chain rehearsals use a separate build directory from the devnet app.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // This project already has hand-maintained instructions in AGENTS.md.
   agentRules: false,
   // Type checking remains a dedicated CI command. Next 16.3's checker currently
