@@ -9,6 +9,7 @@ import {
   SystemInstruction,
   Transaction,
   type PublicKey,
+  type TransactionConfirmationStrategy,
   type TransactionError,
 } from "@solana/web3.js";
 
@@ -44,6 +45,7 @@ test("demo funding verifies devnet before using the faucet or host key", async (
   let airdrops = 0;
   let transfers = 0;
   let confirmationError: TransactionError | null = null;
+  const originalGetGenesisHash = Connection.prototype.getGenesisHash;
   t.mock.method(Connection.prototype, "getGenesisHash", async () => {
     if (genesisFailure) throw new Error("RPC unreachable");
     return genesis;
@@ -74,6 +76,8 @@ test("demo funding verifies devnet before using the faucet or host key", async (
       );
       assert.equal(transfer.fromPubkey.toBase58(), funder.publicKey.toBase58());
       assert.equal(transfer.lamports, 250_000_000n);
+      transaction.recentBlockhash = Keypair.generate().publicKey.toBase58();
+      transaction.lastValidBlockHeight = 100;
       return "test-funder-signature";
     },
   );
@@ -171,4 +175,104 @@ test("demo funding verifies devnet before using the faucet or host key", async (
       delete process.env.SOLARA_DEMO_FUNDER_KEYPAIR;
     },
   );
+
+  await t.test(
+    "an unresponsive RPC is aborted and does not leave a pending lock",
+    async (subtest) => {
+      const controller = new AbortController();
+      subtest.mock.method(AbortSignal, "timeout", (milliseconds: number) => {
+        assert.equal(milliseconds, 30_000);
+        return controller.signal;
+      });
+      subtest.mock.method(
+        Connection.prototype,
+        "getGenesisHash",
+        originalGetGenesisHash,
+      );
+      let markStarted!: () => void;
+      const started = new Promise<void>((resolve) => {
+        markStarted = resolve;
+      });
+      let requests = 0;
+      subtest.mock.method(
+        globalThis,
+        "fetch",
+        async (_url: string | URL | Request, options?: RequestInit) => {
+          requests += 1;
+          const signal = options?.signal;
+          assert.ok(signal);
+          return new Promise<Response>((_resolve, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason), {
+              once: true,
+            });
+            markStarted();
+          });
+        },
+      );
+
+      const address = Keypair.generate().publicKey.toBase58();
+      const pending = POST(fundingRequest(address));
+      await started;
+      assert.equal((await POST(fundingRequest(address))).status, 429);
+      controller.abort(new DOMException("Timed out", "TimeoutError"));
+      const timedOut = await pending;
+      assert.equal(timedOut.status, 504);
+      assert.match((await timedOut.json()).error, /Check your balance/);
+      assert.equal(timedOut.headers.get("Retry-After"), "60");
+      const retried = await POST(fundingRequest(address));
+      assert.equal(retried.status, 429);
+      assert.match((await retried.json()).error, /recently requested/);
+      assert.equal(requests, 1);
+    },
+  );
+
+  for (const useHostKey of [false, true]) {
+    await t.test(
+      `${useHostKey ? "host transfer" : "faucet"} confirmation times out without sending twice`,
+      async (subtest) => {
+        if (useHostKey) process.env.SOLARA_DEMO_FUNDER_KEYPAIR = funderPath;
+        subtest.after(() => {
+          delete process.env.SOLARA_DEMO_FUNDER_KEYPAIR;
+        });
+        balance = 0;
+        subtest.mock.method(
+          Connection.prototype,
+          "getBalance",
+          async (address: PublicKey) =>
+            address.equals(funder.publicKey) ? 1_000_000_000 : 0,
+        );
+        const controller = new AbortController();
+        subtest.mock.method(AbortSignal, "timeout", () => controller.signal);
+        let markConfirming!: () => void;
+        const confirming = new Promise<void>((resolve) => {
+          markConfirming = resolve;
+        });
+        subtest.mock.method(
+          Connection.prototype,
+          "confirmTransaction",
+          async (strategy: TransactionConfirmationStrategy) => {
+            const signal = strategy.abortSignal;
+            assert.ok(signal);
+            return new Promise((_resolve, reject) => {
+              signal.addEventListener("abort", () => reject(signal.reason), {
+                once: true,
+              });
+              markConfirming();
+            });
+          },
+        );
+
+        const beforeAirdrops = airdrops;
+        const beforeTransfers = transfers;
+        const address = Keypair.generate().publicKey.toBase58();
+        const pending = POST(fundingRequest(address));
+        await confirming;
+        controller.abort(new DOMException("Timed out", "TimeoutError"));
+        assert.equal((await pending).status, 504);
+        assert.equal((await POST(fundingRequest(address))).status, 429);
+        assert.equal(airdrops - beforeAirdrops, useHostKey ? 0 : 1);
+        assert.equal(transfers - beforeTransfers, useHostKey ? 1 : 0);
+      },
+    );
+  }
 });
