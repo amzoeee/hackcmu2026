@@ -1,31 +1,31 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
-import {
-  type ConnectedStandardSolanaWallet,
-  useWallets as usePrivyWallets,
-} from "@privy-io/react-auth/solana";
 import {
   useAnchorWallet,
   useConnection,
   useWallet,
-  type AnchorWallet,
 } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import {
-  Keypair,
-  PublicKey,
-  Transaction,
-  VersionedTransaction,
-} from "@solana/web3.js";
+import { Keypair } from "@solana/web3.js";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import {
   getOrCreateDemoKeypair,
   keypairAnchorWallet,
   loadDemoKeypair,
 } from "@/lib/demo-wallet";
-import { DEMO_WALLETS_ENABLED, IS_LOCALNET, SOLANA_NETWORK } from "@/lib/solana";
+import {
+  DEMO_WALLETS_ENABLED,
+  IS_LOCALNET,
+  SOLANA_NETWORK,
+} from "@/lib/solana";
 import { SolaraApp } from "./solara-app";
+
+const PrivyWalletExperience = dynamic(() =>
+  import("./embedded-wallet-experience").then(
+    (module) => module.PrivyWalletExperience,
+  ),
+);
 
 async function requestDemoFunds(address: string) {
   const response = await fetch("/api/demo-funds", {
@@ -42,45 +42,6 @@ async function requestDemoFunds(address: string) {
       result.error || "Could not add test SOL. Please try again in a moment.",
     );
   return result.message || "The demo wallet is funded.";
-}
-
-function embeddedAnchorWallet(
-  wallet: ConnectedStandardSolanaWallet,
-): AnchorWallet {
-  const signTransaction = async <T extends Transaction | VersionedTransaction>(
-    transaction: T,
-  ): Promise<T> => {
-    if (SOLANA_NETWORK !== "devnet") {
-      throw new Error("Embedded wallets are available on devnet only.");
-    }
-    const serialized =
-      transaction instanceof Transaction
-        ? transaction.serialize({
-            requireAllSignatures: false,
-            verifySignatures: false,
-          })
-        : transaction.serialize();
-    const { signedTransaction } = await wallet.signTransaction({
-      transaction: serialized,
-      chain: "solana:devnet",
-    });
-    return (
-      transaction instanceof Transaction
-        ? Transaction.from(signedTransaction)
-        : VersionedTransaction.deserialize(signedTransaction)
-    ) as T;
-  };
-
-  return {
-    publicKey: new PublicKey(wallet.address),
-    signTransaction,
-    signAllTransactions: async <T extends Transaction | VersionedTransaction>(
-      transactions: T[],
-    ) =>
-      Promise.all(
-        transactions.map((transaction) => signTransaction(transaction)),
-      ),
-  };
 }
 
 export function ExternalWalletExperience() {
@@ -108,43 +69,7 @@ export function ExternalWalletExperience() {
 }
 
 export function EmbeddedWalletExperience() {
-  const { connection } = useConnection();
-  const { authenticated, login, logout, connectOrCreateWallet } = usePrivy();
-  const { wallets } = usePrivyWallets();
-  const adapterWallet = useWallet();
-  const adapterAnchorWallet = useAnchorWallet();
-  const embeddedWallet = wallets.find(
-    (wallet) => wallet.standardWallet.name === "Privy",
-  );
-  const anchorWallet = useMemo(
-    () =>
-      embeddedWallet
-        ? embeddedAnchorWallet(embeddedWallet)
-        : adapterAnchorWallet,
-    [adapterAnchorWallet, embeddedWallet],
-  );
-  const address =
-    embeddedWallet?.address || adapterWallet.publicKey?.toBase58();
-
-  return (
-    <SolaraApp
-      connection={connection}
-      wallet={anchorWallet}
-      address={address}
-      connectLabel="Continue with email or Google"
-      walletLabel={
-        embeddedWallet
-          ? "embedded Solara wallet"
-          : adapterWallet.wallet?.adapter.name || "browser wallet"
-      }
-      onConnect={() => {
-        if (authenticated) connectOrCreateWallet();
-        else login();
-      }}
-      onDisconnect={authenticated ? logout : adapterWallet.disconnect}
-      onRequestFunds={address ? () => requestDemoFunds(address) : undefined}
-    />
-  );
+  return <PrivyWalletExperience requestDemoFunds={requestDemoFunds} />;
 }
 
 type DemoMode = "demo" | "external" | null;
