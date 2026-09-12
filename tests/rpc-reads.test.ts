@@ -558,7 +558,10 @@ it("skips pot accounts that do not decode instead of failing the whole read", as
     }),
   );
   // Previous pots were allocated 599 bytes; a settled full one has no spare bytes.
-  const paddedLegacy = Buffer.concat([legacy, Buffer.alloc(599 - legacy.length)]);
+  const paddedLegacy = Buffer.concat([
+    legacy,
+    Buffer.alloc(599 - legacy.length),
+  ]);
   const fullLegacy = legacyOf(
     await program.coder.accounts.encode("pot", {
       ...pot,
@@ -573,7 +576,10 @@ it("skips pot accounts that do not decode instead of failing the whole read", as
     }),
   );
   assert.equal(fullLegacy.length, 599);
-  const garbage = Buffer.concat([current.subarray(0, 8), Buffer.from([1, 2, 3])]);
+  const garbage = Buffer.concat([
+    current.subarray(0, 8),
+    Buffer.from([1, 2, 3]),
+  ]);
   const keys = Array.from({ length: 4 }, () => Keypair.generate().publicKey);
   responses.push(
     { pubkey: keys[0].toBase58(), data: current },
@@ -597,7 +603,10 @@ it("skips pot accounts that do not decode instead of failing the whole read", as
     participant.toBase58(),
   );
   assert.equal(warn.mock.callCount(), 1);
-  assert.match(String(warn.mock.calls[0].arguments[0]), /Skipped 2 pot accounts/);
+  assert.match(
+    String(warn.mock.calls[0].arguments[0]),
+    /Skipped 2 pot accounts/,
+  );
 
   responses.length = 0;
   responses.push({ pubkey: keys[0].toBase58(), data: current });

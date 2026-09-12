@@ -915,7 +915,10 @@ describe("accountability pots", () => {
     const { pot, deadline } = await createPot(creator, creator.publicKey, 8, {
       accessHash,
     });
-    assert.deepEqual((await program.account.pot.fetch(pot)).accessHash, accessHash);
+    assert.deepEqual(
+      (await program.account.pot.fetch(pot)).accessHash,
+      accessHash,
+    );
     const rentReserve = await provider.connection.getBalance(pot);
     const beforeMember = await provider.connection.getBalance(member.publicKey);
 
@@ -923,7 +926,10 @@ describe("accountability pots", () => {
       join(pot, member, "yes", "Open-Sesame"),
       "InvalidAccessCode",
     );
-    await rejectsProgramError(join(pot, member, "yes", ""), "InvalidAccessCode");
+    await rejectsProgramError(
+      join(pot, member, "yes", ""),
+      "InvalidAccessCode",
+    );
     await rejectsProgramError(join(pot, member, "yes"), "InvalidAccessCode");
     await rejectsProgramError(
       join(pot, member, "yes", "x".repeat(65)),
@@ -934,21 +940,30 @@ describe("accountability pots", () => {
       beforeMember,
     );
     assert.equal(await provider.connection.getBalance(pot), rentReserve);
-    assert.equal((await program.account.pot.fetch(pot)).yesParticipants.length, 0);
+    assert.equal(
+      (await program.account.pot.fetch(pot)).yesParticipants.length,
+      0,
+    );
 
     await join(pot, member, "yes", code);
     assert.equal(
       await provider.connection.getBalance(member.publicKey),
       beforeMember - STAKE,
     );
-    assert.equal(await provider.connection.getBalance(pot), rentReserve + STAKE);
+    assert.equal(
+      await provider.connection.getBalance(pot),
+      rentReserve + STAKE,
+    );
     assert.deepEqual(
       (await program.account.pot.fetch(pot)).yesParticipants.map((key) =>
         key.toBase58(),
       ),
       [member.publicKey.toBase58()],
     );
-    await rejectsProgramError(join(pot, member, "no", code), "AlreadyParticipating");
+    await rejectsProgramError(
+      join(pot, member, "no", code),
+      "AlreadyParticipating",
+    );
 
     // A 64-byte code is the longest accepted.
     const longCode = "k".repeat(64);
@@ -965,7 +980,10 @@ describe("accountability pots", () => {
     const open = await createPot(creator, creator.publicKey);
     assert.equal((await program.account.pot.fetch(open.pot)).accessHash, null);
     await join(open.pot, guest, "yes", "anything");
-    assert.equal((await program.account.pot.fetch(open.pot)).yesParticipants.length, 1);
+    assert.equal(
+      (await program.account.pot.fetch(open.pot)).yesParticipants.length,
+      1,
+    );
 
     // Settlement is unaffected by the gate.
     await waitForDeadline(deadline);
@@ -988,7 +1006,10 @@ describe("accountability pots", () => {
     // Invalid names never create the account.
     await rejectsProgramError(setProfile(wallet, ""), "NameRequired");
     await rejectsProgramError(setProfile(wallet, " \n\t "), "NameRequired");
-    await rejectsProgramError(setProfile(wallet, "x".repeat(33)), "NameTooLong");
+    await rejectsProgramError(
+      setProfile(wallet, "x".repeat(33)),
+      "NameTooLong",
+    );
     assert.equal(await provider.connection.getAccountInfo(profile), null);
 
     await setProfile(wallet, "Ada");
@@ -1013,8 +1034,14 @@ describe("accountability pots", () => {
 
     // Invalid overwrites leave the stored name unchanged.
     await rejectsProgramError(setProfile(wallet, ""), "NameRequired");
-    await rejectsProgramError(setProfile(wallet, "x".repeat(33)), "NameTooLong");
-    await rejectsProgramError(setProfile(wallet, "🙂".repeat(9)), "NameTooLong");
+    await rejectsProgramError(
+      setProfile(wallet, "x".repeat(33)),
+      "NameTooLong",
+    );
+    await rejectsProgramError(
+      setProfile(wallet, "🙂".repeat(9)),
+      "NameTooLong",
+    );
     assert.equal(
       (await program.account.profile.fetch(profile)).name,
       "Ada Lovelace",
