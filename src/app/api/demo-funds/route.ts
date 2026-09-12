@@ -41,7 +41,11 @@ async function loadFunder() {
   return Keypair.fromSecretKey(Uint8Array.from(secret));
 }
 
-async function sendDemoSol(connection: Connection, recipient: PublicKey) {
+async function sendDemoSol(
+  connection: Connection,
+  recipient: PublicKey,
+  abortSignal: AbortSignal,
+) {
   const funder = IS_LOCALNET ? null : await loadFunder();
   if (funder) {
     const funderBalance = await connection.getBalance(
@@ -61,14 +65,14 @@ async function sendDemoSol(connection: Connection, recipient: PublicKey) {
         }),
       ),
       [funder],
-      { commitment: "confirmed" },
+      { commitment: "confirmed", abortSignal },
     );
   }
 
   const latestBlockhash = await connection.getLatestBlockhash("confirmed");
   const signature = await connection.requestAirdrop(recipient, FUND_AMOUNT);
   const confirmation = await connection.confirmTransaction(
-    { signature, ...latestBlockhash },
+    { signature, ...latestBlockhash, abortSignal },
     "confirmed",
   );
   if (confirmation.value.err) {
@@ -114,24 +118,27 @@ export async function POST(request: Request) {
       {
         error: inFlight.has(address)
           ? "Funding is already in progress. Check the balance in a moment."
-          : `This wallet was just funded. Try again in ${retryAfter} seconds if needed.`,
+          : `Test SOL was recently requested for this wallet. Check its balance, or try again in ${retryAfter} seconds.`,
       },
       { status: 429, headers: { "Retry-After": String(retryAfter) } },
     );
   }
 
   inFlight.add(address);
+  const abortSignal = AbortSignal.timeout(30_000);
   try {
     const connection = new Connection(SOLANA_RPC_URL, {
       commitment: "confirmed",
       disableRetryOnRateLimit: true,
       wsEndpoint: SOLANA_WS_URL,
+      fetch: (url, options) => fetch(url, { ...options, signal: abortSignal }),
     });
     if (!IS_LOCALNET) {
       let genesis;
       try {
         genesis = await connection.getGenesisHash();
       } catch {
+        if (abortSignal.aborted) throw abortSignal.reason;
         return NextResponse.json(
           {
             error:
@@ -158,7 +165,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const signature = await sendDemoSol(connection, recipient);
+    const signature = await sendDemoSol(connection, recipient, abortSignal);
     cooldowns.set(address, Date.now() + 60_000);
     return NextResponse.json({
       funded: true,
@@ -166,6 +173,17 @@ export async function POST(request: Request) {
       signature,
     });
   } catch (error) {
+    if (abortSignal.aborted) {
+      // A submitted transfer can still land after confirmation times out.
+      cooldowns.set(address, Date.now() + 60_000);
+      return NextResponse.json(
+        {
+          error:
+            "The funding request timed out. Check your balance before requesting more test SOL in a minute.",
+        },
+        { status: 504, headers: { "Retry-After": "60" } },
+      );
+    }
     const detail =
       error instanceof Error ? error.message : "Unknown funding error";
     console.error("Demo wallet funding failed:", detail);

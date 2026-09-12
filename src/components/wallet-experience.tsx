@@ -14,11 +14,7 @@ import {
   keypairAnchorWallet,
   loadDemoKeypair,
 } from "@/lib/demo-wallet";
-import {
-  DEMO_WALLETS_ENABLED,
-  IS_LOCALNET,
-  SOLANA_NETWORK,
-} from "@/lib/solana";
+import { IS_LOCALNET, SOLANA_NETWORK } from "@/lib/solana";
 import { SolaraApp } from "./solara-app";
 
 const PrivyWalletExperience = dynamic(() =>
@@ -28,44 +24,33 @@ const PrivyWalletExperience = dynamic(() =>
 );
 
 async function requestDemoFunds(address: string) {
-  const response = await fetch("/api/demo-funds", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ address }),
-  });
-  const result = (await response.json().catch(() => ({}))) as {
-    error?: string;
-    message?: string;
-  };
-  if (!response.ok)
-    throw new Error(
-      result.error || "Could not add test SOL. Please try again in a moment.",
-    );
-  return result.message || "The demo wallet is funded.";
-}
-
-export function ExternalWalletExperience() {
-  const { connection } = useConnection();
-  const wallet = useWallet();
-  const anchorWallet = useAnchorWallet();
-  const { setVisible } = useWalletModal();
-
-  return (
-    <SolaraApp
-      connection={connection}
-      wallet={anchorWallet}
-      address={wallet.publicKey?.toBase58()}
-      connectLabel="Connect wallet"
-      walletLabel={wallet.wallet?.adapter.name || "browser wallet"}
-      onConnect={() => setVisible(true)}
-      onDisconnect={wallet.disconnect}
-      onRequestFunds={
-        DEMO_WALLETS_ENABLED && wallet.publicKey
-          ? () => requestDemoFunds(wallet.publicKey!.toBase58())
-          : undefined
-      }
-    />
-  );
+  const abortSignal = AbortSignal.timeout(40_000);
+  try {
+    const response = await fetch("/api/demo-funds", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ address }),
+      signal: abortSignal,
+    });
+    const result = (await response.json().catch(() => null)) as {
+      error?: string;
+      message?: string;
+    } | null;
+    abortSignal.throwIfAborted();
+    if (!response.ok || !result)
+      throw new Error(
+        result?.error ||
+          "Could not add test SOL. Please try again in a moment.",
+      );
+    return result.message || "The demo wallet is funded.";
+  } catch (error) {
+    if (abortSignal.aborted) {
+      throw new Error(
+        "Funding is taking too long. Check your balance before requesting more test SOL in a minute.",
+      );
+    }
+    throw error;
+  }
 }
 
 export function EmbeddedWalletExperience() {

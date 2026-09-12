@@ -64,7 +64,7 @@ If the public faucet is rate-limited, set a funded, server-only devnet keypair i
 SOLARA_DEMO_FUNDER_KEYPAIR=.wallets/deployer.json
 ```
 
-The funding route verifies the RPC's devnet identity before funding, adds 0.25 test SOL to low-balance wallets, and checks transaction confirmation. Never use a mainnet keypair or put private-key contents in a `NEXT_PUBLIC_` variable. See `.env.example` for custom devnet RPC and WebSocket settings; restart the server after changes.
+The funding route verifies the RPC's devnet identity before funding, adds 0.25 test SOL to low-balance wallets, and checks transaction confirmation. Requests time out cleanly; check the wallet balance before retrying because a submitted transfer may still arrive. Never use a mainnet keypair or put private-key contents in a `NEXT_PUBLIC_` variable. See `.env.example` for custom devnet RPC and WebSocket settings; restart the server after changes.
 
 For email or Google login, configure a Privy app and set `NEXT_PUBLIC_PRIVY_APP_ID`. Enable the desired login methods and allow the origins used for the demo. Without Privy, the built-in browser wallet and **Use wallet extension** are available. Extensions must use devnet.
 
