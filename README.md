@@ -1,5 +1,7 @@
 # Finance your Responsibilities
 
+<img src="docs/interface-landscape.jpg" alt="Landscape interface showing wallet connection, the new pot form, and devnet pots in a two-column grid" width="960" />
+
 Turn a promise into a shared challenge. Create a task, set a deadline, and stake SOL with friends on whether it gets done. A person you choose as judge decides the result, and the app sends the payout to the winning wallets.
 
 This prototype runs on Solana devnet, a test network.
