@@ -1199,6 +1199,14 @@ export function FinanceYourResponsibilitiesApp({
                 Number(asBigInt(pot.deadline)) * 1000,
               );
               const judgeAddress = pot.judge.toBase58();
+              // Only an opposed verdict has a winning side. A timeout refund,
+              // an unopposed refund, and a forfeiture to the judge have none.
+              const winningSide =
+                pot.settled && !timedOut && !unopposed && participantCount > 0
+                  ? pot.outcome
+                    ? "YES"
+                    : "NO"
+                  : null;
               return (
                 <article
                   className={`pot-row ${pot.settled ? "pot-settled" : ""}`}
@@ -1321,21 +1329,21 @@ export function FinanceYourResponsibilitiesApp({
                     <div
                       className="split-bar"
                       role="img"
-                      aria-label={`Participant split: YES ${pot.yesParticipants.length}, NO ${pot.noParticipants.length}${pot.settled ? `. ${pot.outcome ? "YES" : "NO"} won.` : "."}`}
+                      aria-label={`Participant split: YES ${pot.yesParticipants.length}, NO ${pot.noParticipants.length}${winningSide ? `. ${winningSide} won.` : pot.settled ? ". Settled with no winning side." : "."}`}
                     >
                       <span
-                        className={`split-segment split-yes ${pot.settled && !pot.outcome ? "split-loser" : ""}`}
+                        className={`split-segment split-yes ${winningSide === "NO" ? "split-loser" : ""}`}
                         style={{ width: `${yesPercent}%` }}
                       >
                         YES {pot.yesParticipants.length}
-                        {pot.settled && pot.outcome ? " · won" : ""}
+                        {winningSide === "YES" ? " · won" : ""}
                       </span>
                       <span
-                        className={`split-segment split-no ${pot.settled && pot.outcome ? "split-loser" : ""}`}
+                        className={`split-segment split-no ${winningSide === "YES" ? "split-loser" : ""}`}
                         style={{ width: `${100 - yesPercent}%` }}
                       >
                         NO {pot.noParticipants.length}
-                        {pot.settled && !pot.outcome ? " · won" : ""}
+                        {winningSide === "NO" ? " · won" : ""}
                       </span>
                     </div>
                     <div className="split-legend" aria-hidden="true">
