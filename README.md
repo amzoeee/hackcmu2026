@@ -66,6 +66,8 @@ npm run demo:check
 
 The current optimized program needs roughly 0.9 devnet SOL to deploy. Allow about 1.5 SOL total if that wallet will also fund two participants. Deployment rebuilds the program and verifies its key, configuration, and generated client addresses first. The readiness check requires a configured host funder with at least 0.6 SOL in reserve because public faucet availability cannot be verified. Require `Demo ready: yes`, fund both participant wallets in advance, and repeat the two-profile flow above on devnet.
 
+The [MLH Solana resources](https://www.mlh.com/partners/solana) link to the [official devnet faucet](https://faucet.solana.com/). Use the printed deployer address when funding deployment; local rehearsal SOL cannot be transferred to devnet. Complete the faucet's required verification in the browser.
+
 If the public faucet is rate-limited, set a funded, server-only devnet keypair in `.env.local`:
 
 ```sh
