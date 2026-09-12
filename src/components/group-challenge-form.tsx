@@ -26,6 +26,7 @@ import {
 } from "@/lib/group-challenge";
 import {
   asBigInt,
+  deadlineEndOfDay,
   deadlineFromNow,
   formatSol,
   parseSol,
@@ -694,19 +695,32 @@ export function GroupChallengeForm({
                 />
               </label>
             </div>
-            <div className="deadline-presets">
+            <div className="deadline-presets" aria-label="Quick deadlines">
               <span>From now</span>
-              {[5, 15, 60].map((minutes) => (
-                <button
-                  key={minutes}
-                  className="text-button"
-                  type="button"
-                  disabled={pending}
-                  onClick={() => setDeadline(deadlineFromNow(minutes))}
-                >
-                  {minutes === 60 ? "1 hour" : `${minutes} minutes`}
-                </button>
-              ))}
+              <button
+                type="button"
+                className="text-button"
+                disabled={pending}
+                onClick={() => setDeadline(deadlineFromNow(60))}
+              >
+                1 hr
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                disabled={pending}
+                onClick={() => setDeadline(deadlineFromNow(240))}
+              >
+                4 hr
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                disabled={pending}
+                onClick={() => setDeadline(deadlineEndOfDay())}
+              >
+                End of Day
+              </button>
             </div>
             <label>
               Judge for all tasks
