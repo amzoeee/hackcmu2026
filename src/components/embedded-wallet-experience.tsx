@@ -31,7 +31,7 @@ export function PrivyWalletProvider({
         appearance: {
           theme: "light",
           accentColor: "#135edb",
-          landingHeader: "Continue to Solara",
+          landingHeader: "Continue to Finance your Responsibilities",
           loginMessage: "Your wallet is created automatically.",
           showWalletLoginFirst: false,
           walletChainType: "solana-only",
@@ -124,7 +124,7 @@ export function PrivyWalletExperience({
       connectLabel="Continue with email or Google"
       walletLabel={
         embeddedWallet
-          ? "embedded Solara wallet"
+          ? "embedded Finance your Responsibilities wallet"
           : adapterWallet.wallet?.adapter.name || "browser wallet"
       }
       onConnect={() => {

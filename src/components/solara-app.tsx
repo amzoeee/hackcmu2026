@@ -656,8 +656,12 @@ export function SolaraApp({
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="wordmark" href="#top" aria-label="Solara home">
-          solara
+        <a
+          className="wordmark"
+          href="#top"
+          aria-label="Finance your Responsibilities home"
+        >
+          Finance your Responsibilities
         </a>
         <div className="wallet-area">
           {address ? (
@@ -734,7 +738,10 @@ export function SolaraApp({
         </p>
       </section>
 
-      <ol className="how-it-works" aria-label="How Solara works">
+      <ol
+        className="how-it-works"
+        aria-label="How Finance your Responsibilities works"
+      >
         <li>
           <span>01</span>
           <div>
