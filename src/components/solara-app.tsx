@@ -224,6 +224,7 @@ export function SolaraApp({
     pot: string;
     completed: boolean;
   } | null>(null);
+  const settlementButton = useRef<HTMLButtonElement | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "settled" | "mine">(
     "all",
   );
@@ -659,6 +660,7 @@ export function SolaraApp({
               <button
                 className="wallet-address text-button"
                 type="button"
+                aria-label="Copy wallet address"
                 title={`Copy wallet address: ${address}`}
                 onClick={() => void copyAddress()}
               >
@@ -801,6 +803,7 @@ export function SolaraApp({
             <label>
               Task
               <textarea
+                disabled={pending === "create"}
                 value={task}
                 onChange={(event) => setTask(event.target.value)}
                 maxLength={160}
@@ -819,6 +822,7 @@ export function SolaraApp({
               <label>
                 Stake (SOL)
                 <input
+                  disabled={pending === "create"}
                   value={stake}
                   onChange={(event) => setStake(event.target.value)}
                   inputMode="decimal"
@@ -828,6 +832,7 @@ export function SolaraApp({
               <label>
                 Deadline
                 <input
+                  disabled={pending === "create"}
                   type="datetime-local"
                   step="1"
                   value={deadline}
@@ -840,6 +845,7 @@ export function SolaraApp({
               <button
                 type="button"
                 className="text-button"
+                disabled={pending === "create"}
                 onClick={() => setDeadline(deadlineFromNow(2))}
               >
                 2 minutes
@@ -847,6 +853,7 @@ export function SolaraApp({
               <button
                 type="button"
                 className="text-button"
+                disabled={pending === "create"}
                 onClick={() => setDeadline(deadlineFromNow(5))}
               >
                 5 minutes
@@ -854,6 +861,7 @@ export function SolaraApp({
               <button
                 type="button"
                 className="text-button"
+                disabled={pending === "create"}
                 onClick={() => setDeadline(deadlineFromNow(60))}
               >
                 1 hour
@@ -862,6 +870,7 @@ export function SolaraApp({
             <label>
               Judge wallet
               <input
+                disabled={pending === "create"}
                 value={judge}
                 onChange={(event) => setJudge(event.target.value)}
                 placeholder="Leave blank to judge it yourself"
@@ -1125,6 +1134,7 @@ export function SolaraApp({
                     {joined ? (
                       <p
                         className={`your-result ${pot.settled ? "result-settled" : ""}`}
+                        role="status"
                       >
                         {pot.settled
                           ? refunded
@@ -1185,12 +1195,13 @@ export function SolaraApp({
                           className="button button-primary"
                           type="button"
                           disabled={pending !== null || programReady !== true}
-                          onClick={() =>
+                          onClick={(event) => {
+                            settlementButton.current = event.currentTarget;
                             setSettlement({
                               pot: pot.publicKey.toBase58(),
                               completed: true,
-                            })
-                          }
+                            });
+                          }}
                         >
                           Completed
                         </button>
@@ -1198,12 +1209,13 @@ export function SolaraApp({
                           className="button button-secondary"
                           type="button"
                           disabled={pending !== null || programReady !== true}
-                          onClick={() =>
+                          onClick={(event) => {
+                            settlementButton.current = event.currentTarget;
                             setSettlement({
                               pot: pot.publicKey.toBase58(),
                               completed: false,
-                            })
-                          }
+                            });
+                          }}
                         >
                           Not completed
                         </button>
@@ -1247,7 +1259,10 @@ export function SolaraApp({
                           className="button button-secondary"
                           type="button"
                           disabled={pending !== null}
-                          onClick={() => setSettlement(null)}
+                          onClick={() => {
+                            setSettlement(null);
+                            settlementButton.current?.focus();
+                          }}
                         >
                           Cancel
                         </button>

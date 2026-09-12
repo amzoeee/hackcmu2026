@@ -83,6 +83,14 @@ The production server and two primary browser profiles stayed running for an hou
 
 Pot: `6DmcqiBT7QRLyH8keo3pgDhe1dA9pRQZNoAdHbU7MjDw`. Settlement: `4cz3LUQN2K8eqVJFuDAt8rEWcxFrs9TtvQtrsMENxZhdCizLKArmCqnjizK7jwu51gRpBMy5YNpTohGs58NZTpZx`.
 
+## Keyboard and outcome status
+
+On the compiled interface, opening **Not completed**, tabbing to **Cancel**, and pressing Enter now returns focus to **Not completed**. Before the fix, focus fell back to the page. A later NO-side settlement updated the other profile's personal result in a status region while its focus stayed in the task field. The winner's balance rose from 0.239995 to 0.259995 SOL; the judge paid only the 0.000005 SOL settlement fee.
+
+Pot: `5txTaNASwXn3cY3gmqqxMxvinRqAvJy1JMPcHHV6K27M`. Settlement: `4SuTj5nJDxgJq3RKeFLdUsqoz4XcWHjAEoHBFbXt8oRDbhMYYPcvQdU1tsbsixewgYJ21dtoaTTnNtdngS7kKkTQ`.
+
+The final markup also disables creation fields during submission and adds larger mobile wallet/deadline targets. Their dedicated delayed-form and mobile checks remain incomplete: the viewport override did not apply, and a later browser-control call stalled beyond the work deadline. The keyboard and status checks above were completed; no screen-reader audio test was performed.
+
 ## Original local ledger identifiers
 
 - Wallet A: `4h7yKVVWgYqkLcGoGLzXSFmQVpyDBzh1LuZvfubgsjdX`
