@@ -80,6 +80,17 @@ export type Accountability = {
         {
           "name": "judge",
           "type": "pubkey"
+        },
+        {
+          "name": "accessHash",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
         }
       ]
     },
@@ -117,6 +128,12 @@ export type Accountability = {
             "defined": {
               "name": "side"
             }
+          }
+        },
+        {
+          "name": "accessCode",
+          "type": {
+            "option": "string"
           }
         }
       ]
@@ -329,6 +346,16 @@ export type Accountability = {
       "code": 6020,
       "name": "proofTooLong",
       "msg": "The proof link is too long."
+    },
+    {
+      "code": 6016,
+      "name": "accessCodeTooLong",
+      "msg": "The invite code is too long."
+    },
+    {
+      "code": 6017,
+      "name": "invalidAccessCode",
+      "msg": "The invite code is missing or incorrect."
     }
   ],
   "types": [
@@ -390,6 +417,17 @@ export type Accountability = {
           {
             "name": "proofUri",
             "type": "string"
+          },
+          {
+            "name": "accessHash",
+            "type": {
+              "option": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
           }
         ]
       }

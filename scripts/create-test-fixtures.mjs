@@ -80,6 +80,7 @@ for (const [index, fixture] of fixtures.entries()) {
     settled: false,
     outcome: null,
     proof_uri: "",
+    access_hash: null,
   });
   assert.ok(encoded.length <= data.length);
   encoded.copy(data);

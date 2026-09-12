@@ -48,6 +48,7 @@ type PotAccount = {
   settled: boolean;
   outcome: boolean | null;
   proofUri: string;
+  accessHash: number[] | null;
 };
 
 type Pot = PotAccount & { publicKey: PublicKey };
@@ -546,6 +547,7 @@ export function FinanceYourResponsibilitiesApp({
           new BN(stakeLamports.toString()),
           new BN(deadlineSeconds),
           judgeKey,
+          null,
         )
         .accountsPartial({
           creator: wallet.publicKey,
@@ -578,7 +580,7 @@ export function FinanceYourResponsibilitiesApp({
       }
       setPending(`join-${pot.publicKey.toBase58()}-${side}`);
       const txSignature = await program.methods
-        .joinPot(side === "yes" ? { yes: {} } : { no: {} })
+        .joinPot(side === "yes" ? { yes: {} } : { no: {} }, null)
         .accountsPartial({
           participant: wallet.publicKey,
           pot: pot.publicKey,

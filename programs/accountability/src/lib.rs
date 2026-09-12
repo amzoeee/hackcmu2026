@@ -1,6 +1,7 @@
 #![allow(unexpected_cfgs)]
 
 use anchor_lang::prelude::*;
+use solana_sha256_hasher::hash;
 use anchor_lang::system_program;
 
 declare_id!("EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb");
@@ -8,6 +9,7 @@ declare_id!("EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb");
 const MAX_TASK_LENGTH: usize = 160;
 const MAX_PARTICIPANTS: usize = 10;
 const MAX_PROOF_LENGTH: usize = 200;
+const MAX_ACCESS_CODE_LENGTH: usize = 64;
 
 #[constant]
 pub const SETTLEMENT_GRACE_SECONDS: i64 = 300;
@@ -23,6 +25,7 @@ pub mod accountability {
         stake: u64,
         deadline: i64,
         judge: Pubkey,
+        access_hash: Option<[u8; 32]>,
     ) -> Result<()> {
         require!(!task.trim().is_empty(), AccountabilityError::TaskRequired);
         require!(
@@ -56,6 +59,8 @@ pub mod accountability {
         pot.settled = false;
         pot.outcome = None;
         pot.proof_uri = String::new();
+        // The client hashes the invite code with SHA-256; the program stores that hash as given.
+        pot.access_hash = access_hash;
         Ok(())
     }
 
@@ -74,7 +79,11 @@ pub mod accountability {
         Ok(())
     }
 
-    pub fn join_pot(ctx: Context<JoinPot>, side: Side) -> Result<()> {
+    pub fn join_pot(
+        ctx: Context<JoinPot>,
+        side: Side,
+        access_code: Option<String>,
+    ) -> Result<()> {
         let pot = &mut ctx.accounts.pot;
         let now = Clock::get()?.unix_timestamp;
         require!(!pot.settled, AccountabilityError::PotSettled);
@@ -91,6 +100,22 @@ pub mod accountability {
                     .contains(&ctx.accounts.participant.key()),
             AccountabilityError::AlreadyParticipating
         );
+        if let Some(code) = access_code.as_deref() {
+            require!(
+                code.len() <= MAX_ACCESS_CODE_LENGTH,
+                AccountabilityError::AccessCodeTooLong
+            );
+        }
+        // Open pots ignore any supplied code; gated pots require the matching one.
+        if let Some(expected) = pot.access_hash {
+            let code = access_code
+                .as_deref()
+                .ok_or(AccountabilityError::InvalidAccessCode)?;
+            require!(
+                hash(code.as_bytes()).to_bytes() == expected,
+                AccountabilityError::InvalidAccessCode
+            );
+        }
 
         system_program::transfer(
             CpiContext::new(
@@ -293,6 +318,7 @@ pub struct Pot {
     pub settled: bool,
     pub outcome: Option<bool>,
     pub proof_uri: String,
+    pub access_hash: Option<[u8; 32]>,
 }
 
 impl Pot {
@@ -312,7 +338,9 @@ impl Pot {
         + 1
         + 2
         + 4
-        + MAX_PROOF_LENGTH;
+        + MAX_PROOF_LENGTH
+        + 1
+        + 32;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
@@ -365,6 +393,10 @@ pub enum AccountabilityError {
     ProofRequired,
     #[msg("The proof link is too long.")]
     ProofTooLong,
+    #[msg("The invite code is too long.")]
+    AccessCodeTooLong,
+    #[msg("The invite code is missing or incorrect.")]
+    InvalidAccessCode,
 }
 
 #[cfg(test)]

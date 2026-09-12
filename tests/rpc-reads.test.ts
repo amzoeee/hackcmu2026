@@ -144,7 +144,7 @@ it(
     const started = Date.now();
     await assert.rejects(
       program.methods
-        .joinPot({ yes: {} })
+        .joinPot({ yes: {} }, null)
         .accountsPartial({
           participant: wallet.publicKey,
           pot: Keypair.generate().publicKey,
@@ -270,7 +270,7 @@ it("preserves explicit submission errors and translates logged confirmation fail
     new Connection(`http://127.0.0.1:${address.port}`, "confirmed"),
     wallet,
   );
-  const join = program.methods.joinPot({ yes: {} }).accountsPartial({
+  const join = program.methods.joinPot({ yes: {} }, null).accountsPartial({
     participant: wallet.publicKey,
     pot: Keypair.generate().publicKey,
     systemProgram: SystemProgram.programId,

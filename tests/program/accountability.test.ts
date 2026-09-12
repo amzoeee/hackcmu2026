@@ -17,6 +17,7 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { Accountability } from "../../src/lib/anchor/generated/accountability";
 import {
@@ -27,8 +28,9 @@ import {
 
 const STAKE = 100_000_000; // 0.1 SOL
 const GRACE_SECONDS = 300;
-// Mirrors Pot::SPACE in the program: ten wallets, a 160-byte task and a 200-byte proof link.
-const POT_SIZE = 803;
+// Mirrors Pot::SPACE in the program: ten wallets, a 160-byte task, a 200-byte
+// proof link and an optional invite-code hash.
+const POT_SIZE = 836;
 
 describe("accountability pots", () => {
   const provider = AnchorProvider.env();
@@ -71,7 +73,7 @@ describe("accountability pots", () => {
     creator: Keypair,
     judge: PublicKey,
     deadlineOffsetSeconds = 6,
-    options: { task?: string; stake?: number } = {},
+    options: { task?: string; stake?: number; accessHash?: number[] } = {},
   ) {
     const id = identifier++;
     const deadline = (await chainTime()) + deadlineOffsetSeconds;
@@ -91,6 +93,7 @@ describe("accountability pots", () => {
         new BN(options.stake ?? STAKE),
         new BN(deadline),
         judge,
+        options.accessHash ?? null,
       )
       .accountsPartial({
         creator: creator.publicKey,
@@ -106,9 +109,10 @@ describe("accountability pots", () => {
     pot: PublicKey,
     participant: Keypair,
     side: "yes" | "no",
+    accessCode?: string,
   ) {
     await program.methods
-      .joinPot(side === "yes" ? { yes: {} } : { no: {} })
+      .joinPot(side === "yes" ? { yes: {} } : { no: {} }, accessCode ?? null)
       .accountsPartial({
         participant: participant.publicKey,
         pot,
@@ -184,6 +188,10 @@ describe("accountability pots", () => {
     assert.deepEqual(await snapshot(pot, wallets), before);
   }
 
+  function accessHashFor(code: string) {
+    return Array.from(createHash("sha256").update(code).digest());
+  }
+
   async function submitProof(pot: PublicKey, submitter: Keypair, uri: string) {
     await program.methods
       .submitProof(uri)
@@ -249,6 +257,8 @@ describe("accountability pots", () => {
     assert.equal(account.noParticipants.length, 0);
     assert.equal(account.settled, false);
     assert.equal(account.outcome, null);
+    assert.equal(account.proofUri, "");
+    assert.equal(account.accessHash, null);
   });
 
   it("rejects deadlines whose refund cutoff would overflow and a pot named as its own judge", async () => {
@@ -378,8 +388,10 @@ describe("accountability pots", () => {
         fund(judge, 3 * LAMPORTS_PER_SOL),
         ...participants.slice(1).map((wallet) => fund(wallet)),
       ]);
+      const code = "full-house";
       const { pot, deadline } = await createPot(judge, judge.publicKey, 12, {
         task: "🙂".repeat(40),
+        accessHash: accessHashFor(code),
       });
       const rentReserve = await provider.connection.getBalance(pot);
       const accountInfo = await provider.connection.getAccountInfo(pot);
@@ -390,9 +402,12 @@ describe("accountability pots", () => {
       );
 
       for (const participant of participants.slice(0, 10)) {
-        await join(pot, participant, side);
+        await join(pot, participant, side, code);
       }
-      await rejectsProgramError(join(pot, participants[10], "yes"), "PotFull");
+      await rejectsProgramError(
+        join(pot, participants[10], "yes", code),
+        "PotFull",
+      );
       await submitProof(pot, judge, "p".repeat(200));
       const account = await program.account.pot.fetch(pot);
       assert.equal(
@@ -454,13 +469,15 @@ describe("accountability pots", () => {
       ...yesParticipants.map((wallet) => fund(wallet)),
       ...noWinners.map((wallet) => fund(wallet)),
     ]);
+    const code = "mixed";
     const { pot, deadline } = await createPot(judge, judge.publicKey, 12, {
       task: "x".repeat(160),
+      accessHash: accessHashFor(code),
     });
     const rentReserve = await provider.connection.getBalance(pot);
     for (const participant of yesParticipants)
-      await join(pot, participant, "yes");
-    for (const winner of noWinners) await join(pot, winner, "no");
+      await join(pot, participant, "yes", code);
+    for (const winner of noWinners) await join(pot, winner, "no", code);
     await submitProof(pot, yesParticipants[0], "p".repeat(200));
 
     const winnerBalances = await Promise.all(
@@ -859,6 +876,83 @@ describe("accountability pots", () => {
     const settled = await program.account.pot.fetch(pot);
     assert.equal(settled.settled, true);
     assert.equal(settled.proofUri, longest);
+  });
+
+  it("gates joins behind an invite code and ignores codes on open pots", async () => {
+    const creator = Keypair.generate();
+    const member = Keypair.generate();
+    const guest = Keypair.generate();
+    await Promise.all([
+      fund(creator, 3 * LAMPORTS_PER_SOL),
+      fund(member),
+      fund(guest),
+    ]);
+    const code = "open-sesame";
+    const accessHash = accessHashFor(code);
+    const { pot, deadline } = await createPot(creator, creator.publicKey, 8, {
+      accessHash,
+    });
+    assert.deepEqual((await program.account.pot.fetch(pot)).accessHash, accessHash);
+    const rentReserve = await provider.connection.getBalance(pot);
+    const beforeMember = await provider.connection.getBalance(member.publicKey);
+
+    await rejectsProgramError(
+      join(pot, member, "yes", "Open-Sesame"),
+      "InvalidAccessCode",
+    );
+    await rejectsProgramError(join(pot, member, "yes", ""), "InvalidAccessCode");
+    await rejectsProgramError(join(pot, member, "yes"), "InvalidAccessCode");
+    await rejectsProgramError(
+      join(pot, member, "yes", "x".repeat(65)),
+      "AccessCodeTooLong",
+    );
+    assert.equal(
+      await provider.connection.getBalance(member.publicKey),
+      beforeMember,
+    );
+    assert.equal(await provider.connection.getBalance(pot), rentReserve);
+    assert.equal((await program.account.pot.fetch(pot)).yesParticipants.length, 0);
+
+    await join(pot, member, "yes", code);
+    assert.equal(
+      await provider.connection.getBalance(member.publicKey),
+      beforeMember - STAKE,
+    );
+    assert.equal(await provider.connection.getBalance(pot), rentReserve + STAKE);
+    assert.deepEqual(
+      (await program.account.pot.fetch(pot)).yesParticipants.map((key) =>
+        key.toBase58(),
+      ),
+      [member.publicKey.toBase58()],
+    );
+    await rejectsProgramError(join(pot, member, "no", code), "AlreadyParticipating");
+
+    // A 64-byte code is the longest accepted.
+    const longCode = "k".repeat(64);
+    const longGated = await createPot(creator, creator.publicKey, 8, {
+      accessHash: accessHashFor(longCode),
+    });
+    await join(longGated.pot, guest, "no", longCode);
+    assert.equal(
+      (await program.account.pot.fetch(longGated.pot)).noParticipants.length,
+      1,
+    );
+
+    // Open pots ignore any supplied code.
+    const open = await createPot(creator, creator.publicKey);
+    assert.equal((await program.account.pot.fetch(open.pot)).accessHash, null);
+    await join(open.pot, guest, "yes", "anything");
+    assert.equal((await program.account.pot.fetch(open.pot)).yesParticipants.length, 1);
+
+    // Settlement is unaffected by the gate.
+    await waitForDeadline(deadline);
+    await settle(pot, creator, true, [member.publicKey]);
+    assert.equal((await program.account.pot.fetch(pot)).settled, true);
+    assert.equal(
+      await provider.connection.getBalance(member.publicKey),
+      beforeMember,
+    );
+    assert.equal(await provider.connection.getBalance(pot), rentReserve);
   });
 
   it("settles an empty pot without a payout and rejects late joins", async () => {

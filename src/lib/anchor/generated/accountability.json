@@ -74,6 +74,17 @@
         {
           "name": "judge",
           "type": "pubkey"
+        },
+        {
+          "name": "access_hash",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
         }
       ]
     },
@@ -111,6 +122,12 @@
             "defined": {
               "name": "Side"
             }
+          }
+        },
+        {
+          "name": "access_code",
+          "type": {
+            "option": "string"
           }
         }
       ]
@@ -323,6 +340,16 @@
       "code": 6020,
       "name": "ProofTooLong",
       "msg": "The proof link is too long."
+    },
+    {
+      "code": 6016,
+      "name": "AccessCodeTooLong",
+      "msg": "The invite code is too long."
+    },
+    {
+      "code": 6017,
+      "name": "InvalidAccessCode",
+      "msg": "The invite code is missing or incorrect."
     }
   ],
   "types": [
@@ -384,6 +411,17 @@
           {
             "name": "proof_uri",
             "type": "string"
+          },
+          {
+            "name": "access_hash",
+            "type": {
+              "option": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
           }
         ]
       }
