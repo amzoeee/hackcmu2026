@@ -407,7 +407,14 @@ export function GroupChallengeForm({
           `The organizer needs approximately ${formatSol(reserve)} SOL to finish rent, NO stakes, and fees. Add test SOL, then resume.`,
         );
 
-      let lastValidBlockHeight = 0;
+      // Anchor overwrites recentBlockhash inside sendAndConfirm, so the only way
+      // to learn a transaction's expiry is to observe that call. Record the whole
+      // result and match it to what the wallet signed, so a changed call path
+      // fails loudly instead of saving an expiry that was never read.
+      let latestBlockhash: Readonly<{
+        blockhash: string;
+        lastValidBlockHeight: number;
+      }> | null = null;
       const signingWallet: AnchorWallet = {
         publicKey: wallet.publicKey,
         signAllTransactions: wallet.signAllTransactions.bind(wallet),
@@ -430,12 +437,17 @@ export function GroupChallengeForm({
             throw new Error(
               "The wallet returned an incomplete group transaction.",
             );
+          const prepared = latestBlockhash;
+          if (!prepared || prepared.blockhash !== signed.recentBlockhash)
+            throw new Error(
+              "This transaction's expiry could not be recorded, so it was not submitted. Reload and use Resume to continue safely.",
+            );
           save({
             ...active,
             pending: {
               signature: utils.bytes.bs58.encode(signed.signature),
               blockhash: signed.recentBlockhash,
-              lastValidBlockHeight,
+              lastValidBlockHeight: prepared.lastValidBlockHeight,
             },
           });
           return signed;
@@ -448,7 +460,7 @@ export function GroupChallengeForm({
       );
       provider.connection.getLatestBlockhash = async (...args) => {
         const latest = await getLatestBlockhash(...args);
-        lastValidBlockHeight = latest.lastValidBlockHeight;
+        latestBlockhash = latest;
         return latest;
       };
       const createInstructions = await Promise.all(
@@ -499,6 +511,8 @@ export function GroupChallengeForm({
         showProgress(
           `${index < createBatches.length ? "Creating pots" : "Adding your NO stakes"} · transaction ${index + 1} of ${batches.length}. Approve in your wallet.`,
         );
+        // Never let one batch's expiry stand in for the next one's.
+        latestBlockhash = null;
         const signature = await provider.sendAndConfirm(batches[index]);
         save({
           ...active,
