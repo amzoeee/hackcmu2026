@@ -49,6 +49,8 @@ A controlled RPC proxy delayed reads by ten seconds, then stopped answering, the
 
 Startup funding now completes before publishing a new wallet to the page. A fresh browser wallet showed **Starting…**, then its funded 0.25 SOL balance without the earlier stale-zero interval. A controlled funding failure still connected the wallet, displayed the original recovery message, and left **Add test SOL** available for another attempt.
 
+A separate proxy withheld only blockhash preparation reads. Create and Join released the interface after fifteen seconds with no SOL moved. Restoring RPC allowed creation; a later stalled join crossed the deadline without submitting a stake. The empty pot then settled normally, changing its judge's balance from 0.24493508 to 0.24493008 SOL for the fee alone. The interface displayed clear preparation/retry guidance and cleared unrelated transaction links when wallet-copy or funding feedback appeared.
+
 ## Production build
 
 The compiled production app also passed the full two-profile flow on localnet with fresh browser wallets. Both began with 0.25 SOL. After creation and a YES stake, A held 0.23493008 SOL; B held 0.239995 SOL after joining NO. A settled Completed and finished with 0.25492508 SOL, receiving the 0.02 SOL pool less the settlement fee. Both profiles displayed the settled result automatically, and neither browser reported console warnings or errors during the flow.
