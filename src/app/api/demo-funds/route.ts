@@ -17,11 +17,13 @@ import {
   SOLANA_RPC_URL,
   SOLANA_WS_URL,
 } from "@/lib/solana";
+import { isSecretKeyBytes } from "@/lib/secret-key.mjs";
 
 export const runtime = "nodejs";
 
 const FUND_AMOUNT = LAMPORTS_PER_SOL / 4;
 const SUFFICIENT_BALANCE = LAMPORTS_PER_SOL / 20;
+const FUNDER_EXHAUSTED = "The host's demo funder needs more devnet SOL.";
 const cooldowns = new Map<string, number>();
 const inFlight = new Set<string>();
 
@@ -29,11 +31,7 @@ async function loadFunder() {
   const filename = process.env.SOLARA_DEMO_FUNDER_KEYPAIR;
   if (!filename) return null;
   const secret = JSON.parse(await readFile(filename, "utf8")) as number[];
-  if (
-    !Array.isArray(secret) ||
-    secret.length !== 64 ||
-    secret.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)
-  ) {
+  if (!isSecretKeyBytes(secret)) {
     throw new Error(
       "The demo funder keypair is not a valid Solana keypair file.",
     );
@@ -53,7 +51,7 @@ async function sendDemoSol(
       "confirmed",
     );
     if (funderBalance < FUND_AMOUNT + 10_000) {
-      throw new Error("The host's demo funder needs more devnet SOL.");
+      throw new Error(FUNDER_EXHAUSTED);
     }
     return sendAndConfirmTransaction(
       connection,
@@ -189,11 +187,14 @@ export async function POST(request: Request) {
     console.error("Demo wallet funding failed:", detail);
     return NextResponse.json(
       {
-        error: IS_LOCALNET
-          ? "The local validator could not add test SOL. Check that the local rehearsal is still running, then try again."
-          : process.env.SOLARA_DEMO_FUNDER_KEYPAIR
-            ? "The host could not add test SOL. Ask the host to check the demo funder's balance and connection, then try again."
-            : "The devnet faucet is busy. Try again later, or ask the host to fund this wallet with devnet SOL.",
+        error:
+          detail === FUNDER_EXHAUSTED
+            ? FUNDER_EXHAUSTED
+            : IS_LOCALNET
+              ? "The local validator could not add test SOL. Check that the local rehearsal is still running, then try again."
+              : process.env.SOLARA_DEMO_FUNDER_KEYPAIR
+                ? "The host could not add test SOL. Ask the host to check the demo funder's balance and connection, then try again."
+                : "The devnet faucet is busy. Try again later, or ask the host to fund this wallet with devnet SOL.",
       },
       { status: 503 },
     );

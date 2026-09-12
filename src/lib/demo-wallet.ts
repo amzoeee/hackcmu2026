@@ -1,5 +1,6 @@
 import type { AnchorWallet } from "@solana/wallet-adapter-react";
 import { Keypair, Transaction, VersionedTransaction } from "@solana/web3.js";
+import { isSecretKeyBytes } from "./secret-key.mjs";
 import { DEMO_WALLETS_ENABLED, SOLANA_NETWORK } from "./solana";
 
 const STORAGE_KEY = `solara.${SOLANA_NETWORK}.demo-wallet`;
@@ -10,12 +11,7 @@ export function loadDemoKeypair() {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (!stored) return null;
     const secret = JSON.parse(stored) as number[];
-    if (
-      !Array.isArray(secret) ||
-      secret.length !== 64 ||
-      secret.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)
-    )
-      return null;
+    if (!isSecretKeyBytes(secret)) return null;
     return Keypair.fromSecretKey(Uint8Array.from(secret));
   } catch {
     return null;

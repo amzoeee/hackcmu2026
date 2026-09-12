@@ -12,8 +12,7 @@ import {
   type TransactionConfirmationStrategy,
   type TransactionError,
 } from "@solana/web3.js";
-
-const DEVNET_GENESIS = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
+import { DEVNET_GENESIS } from "../src/lib/networks.mjs";
 
 function fundingRequest(address = Keypair.generate().publicKey.toBase58()) {
   return new Request("http://localhost/api/demo-funds", {

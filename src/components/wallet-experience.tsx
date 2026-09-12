@@ -90,6 +90,17 @@ export function DemoWalletExperience() {
     return () => window.clearTimeout(restore);
   }, []);
 
+  useEffect(() => {
+    // Only remember the extension once it actually connected. Closing the
+    // chooser without picking one must still fall back to the demo wallet.
+    if (mode !== "external" || !adapterAnchorWallet) return;
+    try {
+      window.localStorage.setItem(DEMO_MODE_KEY, "external");
+    } catch {
+      // An extension manages its own storage and can still connect.
+    }
+  }, [adapterAnchorWallet, mode]);
+
   const demoWallet = useMemo(
     () => (demoKeypair ? keypairAnchorWallet(demoKeypair) : undefined),
     [demoKeypair],
@@ -114,11 +125,6 @@ export function DemoWalletExperience() {
   }
 
   function connectExternalWallet() {
-    try {
-      window.localStorage.setItem(DEMO_MODE_KEY, "external");
-    } catch {
-      // An extension manages its own storage and can still connect.
-    }
     setMode("external");
     setVisible(true);
   }

@@ -57,6 +57,12 @@ type SolaraAppProps = {
 };
 
 const ONE_SOL = BigInt(LAMPORTS_PER_SOL);
+// These mirror MAX_PARTICIPANTS and MAX_TASK_LENGTH in the Anchor program.
+const MAX_PARTICIPANTS = 10;
+const MAX_TASK_BYTES = 160;
+// The program compares against the cluster Clock, which can trail wall time by
+// a few slots. Hold joins open and settlement back until the chain has caught up.
+const CLOCK_DRIFT_SECONDS = 10;
 
 function asBigInt(value: BN | bigint | number) {
   return typeof value === "bigint"
@@ -393,7 +399,7 @@ export function SolaraApp({
       window.clearTimeout(initial);
       window.clearInterval(interval);
     };
-  }, [address]);
+  }, []);
 
   const afterTransaction = useCallback(
     (message: string, transactionSignature?: string) => {
@@ -505,8 +511,10 @@ export function SolaraApp({
       const stakeLamports = parseSol(stake);
       const deadlineSeconds = Math.floor(new Date(deadline).getTime() / 1000);
       if (!task.trim()) throw new Error("Add a task description.");
-      if (new TextEncoder().encode(task.trim()).length > 160) {
-        throw new Error("Task descriptions are limited to 160 UTF-8 bytes.");
+      if (taskBytes > MAX_TASK_BYTES) {
+        throw new Error(
+          `Task descriptions are limited to ${MAX_TASK_BYTES} UTF-8 bytes.`,
+        );
       }
       if (
         !Number.isFinite(deadlineSeconds) ||
@@ -628,6 +636,8 @@ export function SolaraApp({
       setPending(null);
     }
   }
+
+  const taskBytes = new TextEncoder().encode(task.trim()).length;
 
   const visiblePots = pots.filter((pot) => {
     if (filter === "active") return !pot.settled;
@@ -806,16 +816,16 @@ export function SolaraApp({
                 disabled={pending === "create"}
                 value={task}
                 onChange={(event) => setTask(event.target.value)}
-                maxLength={160}
+                maxLength={MAX_TASK_BYTES}
                 placeholder="Finish the pitch before our demo"
                 aria-describedby="task-note"
               />
               <span
-                className={`field-note ${new TextEncoder().encode(task.trim()).length > 160 ? "field-error" : ""}`}
+                className={`field-note ${taskBytes > MAX_TASK_BYTES ? "field-error" : ""}`}
                 id="task-note"
               >
-                {new TextEncoder().encode(task.trim()).length}/160 bytes · Keep
-                the outcome easy to judge.
+                {taskBytes}/{MAX_TASK_BYTES} bytes · Keep the outcome easy to
+                judge.
               </span>
             </label>
             <div className="form-grid">
@@ -927,7 +937,7 @@ export function SolaraApp({
               type="button"
               disabled={loadingPots}
               onClick={() =>
-                void Promise.all([refreshPots(), refreshBalance()])
+                void Promise.all([refreshPots(), refreshBalance(true)])
               }
             >
               {loadingPots ? "Refreshing…" : "Refresh"}
@@ -1026,7 +1036,8 @@ export function SolaraApp({
                 : false;
               const joined = joinedYes || joinedNo;
               const deadlinePassed =
-                Number(asBigInt(pot.deadline)) <= Math.floor(now / 1000);
+                Number(asBigInt(pot.deadline)) + CLOCK_DRIFT_SECONDS <=
+                Math.floor(now / 1000);
               const isJudge = address === pot.judge.toBase58();
               const participantCount =
                 pot.yesParticipants.length + pot.noParticipants.length;
@@ -1076,7 +1087,7 @@ export function SolaraApp({
                             : "Not completed"
                           : deadlinePassed
                             ? "Awaiting judge"
-                            : participantCount === 10
+                            : participantCount === MAX_PARTICIPANTS
                               ? "Full"
                               : "Open"}
                       </span>
@@ -1119,8 +1130,8 @@ export function SolaraApp({
                     </div>
                     {!pot.settled ? (
                       <p className="time-note">
-                        {timeRemaining(pot.deadline, now)} · {participantCount}
-                        /10 places filled
+                        {timeRemaining(pot.deadline, now)} · {participantCount}/
+                        {MAX_PARTICIPANTS} places filled
                       </p>
                     ) : (
                       <p className="time-note">
@@ -1149,8 +1160,8 @@ export function SolaraApp({
                   {!pot.settled && !deadlinePassed && !joined ? (
                     <div className="pot-actions">
                       <span className="side-count">
-                        {participantCount === 10
-                          ? "All 10 places are taken."
+                        {participantCount === MAX_PARTICIPANTS
+                          ? `All ${MAX_PARTICIPANTS} places are taken.`
                           : `Choose a side · ${formatSol(pot.stake)} SOL`}
                       </span>
                       <div className="button-group">
@@ -1159,7 +1170,7 @@ export function SolaraApp({
                           type="button"
                           disabled={
                             pending !== null ||
-                            participantCount >= 10 ||
+                            participantCount >= MAX_PARTICIPANTS ||
                             programReady !== true
                           }
                           onClick={() => void joinPot(pot, "yes")}
@@ -1173,7 +1184,7 @@ export function SolaraApp({
                           type="button"
                           disabled={
                             pending !== null ||
-                            participantCount >= 10 ||
+                            participantCount >= MAX_PARTICIPANTS ||
                             programReady !== true
                           }
                           onClick={() => void joinPot(pot, "no")}

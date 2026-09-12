@@ -36,13 +36,18 @@ export function getAccountabilityProgram(
     transactionConnection,
   );
   transactionConnection.sendRawTransaction = async (raw, options) => {
-    const signature = utils.bytes.bs58.encode(
-      VersionedTransaction.deserialize(Uint8Array.from(raw)).signatures[0],
-    );
     try {
       return await sendRawTransaction(raw, options);
     } catch (cause) {
       if (cause instanceof SendTransactionError) throw cause;
+      let signature: string | undefined;
+      try {
+        signature = utils.bytes.bs58.encode(
+          VersionedTransaction.deserialize(Uint8Array.from(raw)).signatures[0],
+        );
+      } catch {
+        // An unreadable signature still leaves the submission uncertain.
+      }
       throw Object.assign(
         new Error(
           "The submission response was lost. This transaction may have succeeded. Check its status and refresh before trying again.",
@@ -63,13 +68,21 @@ export function getAccountabilityProgram(
       );
     }
   };
+  // Anchor fetches logs for a failed transaction and then rebuilds the error
+  // with web3's obsolete positional SendTransactionError constructor, losing
+  // them. Translate during that fetch only, so getTransaction stays an ordinary
+  // bounded read for every other caller.
+  let translateFailedReads = false;
   transactionConnection.getTransaction = async (...args) => {
     // Optional logs must not replace Anchor's known confirmation failure.
     const failedTransaction = await reader
       .getTransaction(...args)
       .catch(() => null);
-    if (failedTransaction?.meta?.err && failedTransaction.meta.logMessages) {
-      // Anchor 0.32 still calls web3's obsolete positional error constructor.
+    if (
+      translateFailedReads &&
+      failedTransaction?.meta?.err &&
+      failedTransaction.meta.logMessages
+    ) {
       throw new SendTransactionError({
         action: "send",
         signature: args[0],
@@ -82,6 +95,15 @@ export function getAccountabilityProgram(
   const provider = new AnchorProvider(transactionConnection, wallet, {
     commitment: "confirmed",
   });
+  const sendAndConfirm = provider.sendAndConfirm.bind(provider);
+  provider.sendAndConfirm = async (...args) => {
+    translateFailedReads = true;
+    try {
+      return await sendAndConfirm(...args);
+    } finally {
+      translateFailedReads = false;
+    }
+  };
   return new Program<Accountability>(idl as Accountability, provider);
 }
 

@@ -26,7 +26,8 @@
     "anchor:test": "npm run anchor:build && npm run anchor -- test --skip-build --provider.cluster localnet",
     "anchor:deploy:devnet": "bash scripts/with-tools.sh bash scripts/deploy-devnet.sh",
     "test": "npm run anchor:test",
-    "test:anchor": "node --import tsx --test --test-timeout=100000 tests/*.test.ts"
+    "test:anchor": "node --import tsx --test --test-timeout=100000 tests/program/*.test.ts",
+    "test:offchain": "node --import tsx --test --test-timeout=90000 tests/*.test.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.32.1",

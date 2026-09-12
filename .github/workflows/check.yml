@@ -27,4 +27,4 @@ jobs:
       - name: Lint, typecheck, and build
         run: npm run check
       - name: Test funding and RPC recovery
-        run: node --import tsx --test --test-timeout=60000 tests/demo-funds.test.ts tests/rpc-reads.test.ts
+        run: npm run test:offchain
