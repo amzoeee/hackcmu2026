@@ -715,7 +715,7 @@ export function GroupChallengeForm({
             <ul>
               {activePlan.entries.map((entry, index) => (
                 <li key={entry.pot}>
-                  <a href={`?pot=${entry.pot}#pot-${entry.pot}`}>
+                  <a href={`#pot-${entry.pot}`}>
                     {parseGroupTask(entry.task)?.task ?? `Friend ${index + 1}`}
                   </a>{" "}
                   ·{" "}
