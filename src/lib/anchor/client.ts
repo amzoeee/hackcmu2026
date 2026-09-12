@@ -118,13 +118,22 @@ export type PotRecord = {
   account: IdlAccounts<Accountability>["pot"];
 };
 
+export type PotRead = {
+  pots: PotRecord[];
+  /**
+   * Pots the current layout cannot read. They still hold their stakes, so the
+   * caller has to say so rather than let them disappear from the list.
+   */
+  undecodable: PublicKey[];
+};
+
 /**
- * Reads every pot like `program.account.pot.all()`, but skips accounts that
+ * Reads every pot like `program.account.pot.all()`, but separates accounts that
  * do not decode with the current layout instead of failing the whole read.
  */
 export async function fetchDecodablePots(
   program: Program<Accountability>,
-): Promise<PotRecord[]> {
+): Promise<PotRead> {
   const discriminator = program.coder.accounts.memcmp("pot") as {
     offset: number;
     bytes: string;
@@ -134,7 +143,7 @@ export async function fetchDecodablePots(
     { commitment: "confirmed", filters: [{ memcmp: discriminator }] },
   );
   const pots: PotRecord[] = [];
-  let skipped = 0;
+  const undecodable: PublicKey[] = [];
   for (const { pubkey, account } of accounts) {
     try {
       pots.push({
@@ -142,15 +151,10 @@ export async function fetchDecodablePots(
         account: program.coder.accounts.decode("pot", account.data),
       });
     } catch {
-      skipped += 1;
+      undecodable.push(pubkey);
     }
   }
-  if (skipped > 0) {
-    console.warn(
-      `Skipped ${skipped} pot account${skipped === 1 ? "" : "s"} that cannot be decoded with the current program layout.`,
-    );
-  }
-  return pots;
+  return { pots, undecodable };
 }
 
 /** A public account reader. It cannot sign, so it is safe to use before login. */

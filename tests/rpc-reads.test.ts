@@ -486,7 +486,7 @@ it(
   },
 );
 
-it("skips pot accounts that do not decode instead of failing the whole read", async (t) => {
+it("reports pot accounts that do not decode instead of failing the whole read", async (t) => {
   const programId = Keypair.generate().publicKey;
   const responses: Array<{ pubkey: string; data: Buffer }> = [];
   const server = createServer(async (request, response) => {
@@ -528,8 +528,6 @@ it("skips pot accounts that do not decode instead of failing the whole read", as
   const program = getReadOnlyAccountabilityProgram(
     new Connection(`http://127.0.0.1:${address.port}`, "confirmed"),
   );
-  const warn = t.mock.method(console, "warn", () => {});
-
   const participant = Keypair.generate().publicKey;
   const pot = {
     creator: Keypair.generate().publicKey,
@@ -588,10 +586,16 @@ it("skips pot accounts that do not decode instead of failing the whole read", as
     { pubkey: keys[3].toBase58(), data: garbage },
   );
 
-  const pots = await fetchDecodablePots(program);
+  const { pots, undecodable } = await fetchDecodablePots(program);
   assert.deepEqual(
     pots.map(({ publicKey }) => publicKey.toBase58()),
     [keys[0].toBase58(), keys[1].toBase58()],
+  );
+  // The caller is told which accounts were left out, so a pot holding stakes
+  // cannot vanish from the list without explanation.
+  assert.deepEqual(
+    undecodable.map((publicKey) => publicKey.toBase58()),
+    [keys[2].toBase58(), keys[3].toBase58()],
   );
   assert.equal(pots[0].account.task, "Ship it");
   assert.equal(pots[0].account.proofUri, "https://example.com/proof");
@@ -602,14 +606,10 @@ it("skips pot accounts that do not decode instead of failing the whole read", as
     pots[1].account.yesParticipants[0].toBase58(),
     participant.toBase58(),
   );
-  assert.equal(warn.mock.callCount(), 1);
-  assert.match(
-    String(warn.mock.calls[0].arguments[0]),
-    /Skipped 2 pot accounts/,
-  );
 
   responses.length = 0;
   responses.push({ pubkey: keys[0].toBase58(), data: current });
-  assert.equal((await fetchDecodablePots(program)).length, 1);
-  assert.equal(warn.mock.callCount(), 1);
+  const clean = await fetchDecodablePots(program);
+  assert.equal(clean.pots.length, 1);
+  assert.deepEqual(clean.undecodable, []);
 });

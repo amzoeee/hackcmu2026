@@ -161,6 +161,7 @@ export function FinanceYourResponsibilitiesApp({
   const [pots, setPots] = useState<Pot[]>([]);
   const [loadingPots, setLoadingPots] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [unreadablePots, setUnreadablePots] = useState<string[]>([]);
   const [programReady, setProgramReady] = useState<boolean | null>(null);
   const [walletBalance, setWalletBalance] = useState<{
     address: string;
@@ -270,25 +271,25 @@ export function FinanceYourResponsibilitiesApp({
             "Use Solana devnet or the local rehearsal to open this prototype.",
           );
         }
-        const [programAccount, accounts, genesis, deployedIdl] =
-          await Promise.all([
-            readConnection.getAccountInfo(readProgram.programId, "confirmed"),
-            fetchDecodablePots(readProgram),
-            SOLANA_NETWORK === "devnet"
-              ? readConnection.getGenesisHash()
-              : Promise.resolve(null),
-            SOLANA_NETWORK === "devnet" && recoveryIdlVerified.current !== true
-              ? // A failed IDL read must not discard pots that loaded correctly.
-                Program.fetchIdl(
-                  readProgram.programId,
-                  readProgram.provider,
-                ).catch(() => undefined)
-              : Promise.resolve(undefined),
-          ]);
+        const [programAccount, read, genesis, deployedIdl] = await Promise.all([
+          readConnection.getAccountInfo(readProgram.programId, "confirmed"),
+          fetchDecodablePots(readProgram),
+          SOLANA_NETWORK === "devnet"
+            ? readConnection.getGenesisHash()
+            : Promise.resolve(null),
+          SOLANA_NETWORK === "devnet" && recoveryIdlVerified.current !== true
+            ? // A failed IDL read must not discard pots that loaded correctly.
+              Program.fetchIdl(
+                readProgram.programId,
+                readProgram.provider,
+              ).catch(() => undefined)
+            : Promise.resolve(undefined),
+        ]);
         if (request !== potRequest.current) return;
         if (SOLANA_NETWORK === "devnet" && genesis !== DEVNET_GENESIS) {
           setProgramReady(null);
           setPots([]);
+          setUnreadablePots([]);
           throw new Error(
             "The configured connection is not Solana devnet. Ask the host to correct the RPC setting.",
           );
@@ -313,8 +314,11 @@ export function FinanceYourResponsibilitiesApp({
             ? "The deployed program needs the settlement recovery upgrade. Ask the host to deploy the current program and IDL before staking or settling."
             : null,
         );
+        setUnreadablePots(
+          read.undecodable.map((publicKey) => publicKey.toBase58()),
+        );
         setPots(
-          accounts
+          read.pots
             .map(({ publicKey, account }) => ({ ...account, publicKey }))
             .sort(
               (left, right) =>
@@ -1096,6 +1100,20 @@ export function FinanceYourResponsibilitiesApp({
           {loadError ? (
             <div className="message message-error" role="alert">
               {loadError}
+            </div>
+          ) : null}
+          {unreadablePots.length > 0 ? (
+            <div className="message message-error" role="alert">
+              <p>
+                {unreadablePots.length === 1
+                  ? "One pot account cannot be read by the current program and is not listed below."
+                  : `${unreadablePots.length} pot accounts cannot be read by the current program and are not listed below.`}{" "}
+                Any stake they hold is still on chain. They were created before
+                the current layout and need a one-time repair
+                (&lsquo;resize_pot&rsquo;) before they can be settled or
+                refunded.
+              </p>
+              <p className="empty-copy">{unreadablePots.join(", ")}</p>
             </div>
           ) : null}
           {programReady === false ? (
