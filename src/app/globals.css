@@ -601,7 +601,7 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
   .pot-row {
-    scroll-margin-top: 136px;
+    scroll-margin-top: 184px;
     grid-template-columns: 1fr;
     gap: 24px;
   }
@@ -614,6 +614,8 @@ textarea:focus {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
+  .wallet-area > .text-button,
+  .deadline-presets .text-button,
   .pot-records .text-button,
   .pot-records .record-link {
     display: inline-flex;
