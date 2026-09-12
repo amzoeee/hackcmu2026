@@ -1172,16 +1172,9 @@ export function FinanceYourResponsibilitiesApp({
               const selectedWinners = settlement?.completed
                 ? pot.yesParticipants
                 : pot.noParticipants;
-              const reviewRecipients =
-                participantCount === 0
-                  ? 0
-                  : unopposed
-                    ? settlement?.completed
-                      ? participantCount
-                      : 1
-                    : selectedWinners.length;
-              const reviewPayout = reviewRecipients
-                ? pool / BigInt(reviewRecipients)
+              // Only read for opposed pots; the unopposed copy states its own amounts.
+              const reviewPayout = selectedWinners.length
+                ? pool / BigInt(selectedWinners.length)
                 : 0n;
               return (
                 <article
