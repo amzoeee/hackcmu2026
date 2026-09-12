@@ -22,7 +22,7 @@ fi
 # Refuse occupied ports rather than attaching to another demo or test process.
 node --input-type=module <<'NODE'
 import { createServer } from 'node:net';
-for (const port of [3001, 18999, 19000, 19900]) {
+for (const port of [3001, 18800, 18999, 19000, 19900]) {
   const server = createServer();
   try {
     await new Promise((resolve, reject) => {

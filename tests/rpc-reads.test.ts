@@ -320,15 +320,12 @@ it("preserves explicit submission errors and translates logged confirmation fail
     return true;
   });
   assert.equal(confirm.mock.callCount(), 1);
-  await assert.rejects(
-    program.provider.connection.getTransaction(submittedSignature),
-    (error: unknown) => {
-      assert.ok(error instanceof SendTransactionError);
-      assert.equal(Reflect.get(error, "signature"), submittedSignature);
-      assert.deepEqual(error.logs, logs);
-      return true;
-    },
-  );
+  // Outside Anchor's own log fetch, reading a failed transaction returns the
+  // record rather than throwing.
+  const record =
+    await program.provider.connection.getTransaction(submittedSignature);
+  assert.deepEqual(record?.meta?.err, confirmationError);
+  assert.deepEqual(record?.meta?.logMessages, logs);
 });
 
 it(

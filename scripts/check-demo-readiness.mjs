@@ -7,18 +7,23 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
 } from "@solana/web3.js";
+import {
+  DEFAULT_SOLANA_NETWORK,
+  DEFAULT_SOLANA_RPC_URL,
+  DEVNET_GENESIS,
+} from "../src/lib/networks.mjs";
+import { isSecretKeyBytes } from "../src/lib/secret-key.mjs";
 
 const require = createRequire(import.meta.url);
 const { loadEnvConfig } = require("@next/env");
 loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
 
-const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet";
-const rpcUrl =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+const network =
+  process.env.NEXT_PUBLIC_SOLANA_NETWORK || DEFAULT_SOLANA_NETWORK;
+const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || DEFAULT_SOLANA_RPC_URL;
 const programId =
   require("../src/lib/anchor/generated/accountability.json").address;
 const funderPath = process.env.SOLARA_DEMO_FUNDER_KEYPAIR;
-const devnetGenesis = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
 let ready = true;
 
 function sol(lamports) {
@@ -27,11 +32,7 @@ function sol(lamports) {
 
 async function readAddress(filename) {
   const secret = JSON.parse(await readFile(filename, "utf8"));
-  if (
-    !Array.isArray(secret) ||
-    secret.length !== 64 ||
-    secret.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)
-  ) {
+  if (!isSecretKeyBytes(secret)) {
     throw new Error("Invalid keypair file");
   }
   return Keypair.fromSecretKey(Uint8Array.from(secret)).publicKey;
@@ -72,7 +73,7 @@ try {
       "The RPC could not be reached. Check the connection and RPC settings.",
     );
   }
-  if (genesis !== devnetGenesis) {
+  if (genesis !== DEVNET_GENESIS) {
     throw new Error("The configured RPC is not Solana devnet.");
   }
   console.log("Network check: verified devnet");

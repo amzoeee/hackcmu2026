@@ -51,7 +51,7 @@ For a presentation with the funded deployer providing test SOL:
 npm run demo:devnet -- --production
 ```
 
-Open [http://127.0.0.1:3002](http://127.0.0.1:3002) in two browser profiles and follow the create, join, and settle steps above. This command verifies deployment and funding, builds with devnet settings, and serves only on this computer. It uses `.wallets/deployer.json` as the server-only funder and keeps its build separate from local rehearsals. Omit `-- --production` for development mode.
+Open [http://127.0.0.1:3002](http://127.0.0.1:3002) in two browser profiles and follow the create, join, and settle steps above. This command verifies deployment and funding, builds with devnet settings, and serves only on this computer. It uses `.wallets/deployer.json` as the server-only funder, keeps its build separate from local rehearsals, and uses any devnet RPC configured in `.env.local` instead of forcing the public endpoint. Omit `-- --production` for development mode.
 
 For ordinary frontend development:
 
@@ -128,7 +128,7 @@ Keep the standalone TypeScript check: Next's built-in checker is disabled becaus
 | Styling                                     | `src/app/globals.css`                                                        |
 | Anchor client and generated types           | `src/lib/anchor/`                                                            |
 | On-chain program                            | `programs/accountability/src/lib.rs`                                         |
-| Program tests                               | `tests/accountability.test.ts`                                               |
+| Program tests                               | `tests/program/accountability.test.ts`                                               |
 | Tooling, deployment, and rehearsal commands | `scripts/`                                                                   |
 | Prototype scope and working instructions    | `AGENTS.md`                                                                  |
 

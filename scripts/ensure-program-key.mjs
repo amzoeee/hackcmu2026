@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { Keypair } from "@solana/web3.js";
+import { isSecretKeyBytes } from "../src/lib/secret-key.mjs";
 
 const mode = process.argv[2] || "";
 const durablePath = ".wallets/accountability-program.json";
@@ -19,13 +20,7 @@ async function readKey(path) {
   }
   try {
     const bytes = JSON.parse(contents);
-    if (
-      !Array.isArray(bytes) ||
-      bytes.length !== 64 ||
-      bytes.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)
-    ) {
-      throw new Error();
-    }
+    if (!isSecretKeyBytes(bytes)) throw new Error();
     return Keypair.fromSecretKey(Uint8Array.from(bytes));
   } catch {
     throw new Error(`Invalid program key file: ${path}. Restore its backup.`);

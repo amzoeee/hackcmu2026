@@ -11,8 +11,9 @@ elif [[ $# -ne 0 ]]; then
 fi
 
 export NEXT_PUBLIC_SOLANA_NETWORK=devnet
-export NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
-export NEXT_PUBLIC_SOLANA_WS_URL=wss://api.devnet.solana.com
+# Leave the RPC and WebSocket URLs to the environment and .env.local so a host
+# can present on a private devnet endpoint. Unset, they default to the public
+# devnet RPC, and the readiness check below verifies the genesis hash either way.
 export NEXT_PUBLIC_PRIVY_APP_ID=
 export SOLARA_DEMO_FUNDER_KEYPAIR=.wallets/deployer.json
 export NEXT_DIST_DIR=.next-devnet

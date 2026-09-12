@@ -16,7 +16,7 @@ import {
   SystemProgram,
 } from "@solana/web3.js";
 import { readFileSync } from "node:fs";
-import type { Accountability } from "../src/lib/anchor/generated/accountability";
+import type { Accountability } from "../../src/lib/anchor/generated/accountability";
 
 const STAKE = 100_000_000; // 0.1 SOL
 
