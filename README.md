@@ -2,7 +2,7 @@
 
 A prototype where a trusted group stakes test SOL on whether someone completes a task. A named judge settles after the deadline, and winners receive the pot in one transaction.
 
-The original program is deployed on Solana devnet, and its complete two-browser demo passed there: separate funded wallets, pot creation, opposite-side stakes, judge settlement after the deadline, and visible SOL payouts. The [browser verification record](docs/browser-verification.md) contains the balances and public transaction links. Local rehearsal and failure-recovery checks also passed. The settlement recovery and group challenge changes require a program upgrade and a fresh rehearsal; the earlier record does not verify these new rules.
+The original program is deployed on Solana devnet, and its complete two-browser demo passed there: separate funded wallets, pot creation, opposite-side stakes, judge settlement after the deadline, and visible SOL payouts. The [browser verification record](docs/browser-verification.md) contains the balances and public transaction links. Local rehearsal and failure-recovery checks also passed. The settlement recovery and group challenge changes have passed the [local browser rehearsal](docs/recovery-verification.md). A program upgrade and fresh devnet rehearsal are required before using these new rules there.
 
 ## Settlement and recovery
 
@@ -88,7 +88,7 @@ npm run anchor:deploy:devnet
 npm run demo:check
 ```
 
-The current optimized program needs roughly 0.9 devnet SOL to deploy. Allow about 1.5 SOL total if that wallet will also fund two participants. Deployment rebuilds the program and verifies its key, configuration, and generated client addresses first. The readiness check requires a configured host funder with at least 0.6 SOL in reserve because public faucet availability cannot be verified. Require `Demo ready: yes`, fund both participant wallets in advance, and repeat the two-profile flow above on devnet.
+The current optimized program needs roughly 0.9 devnet SOL to deploy. Allow about 1.5 SOL total if that wallet will also fund two participants. Deployment rebuilds the program and verifies its key, configuration, and generated client addresses first. It also checks existing program capacity and applies the cluster’s minimum allocation increase when a larger binary requires one. The readiness check requires a configured host funder with at least 0.6 SOL in reserve because public faucet availability cannot be verified. Require `Demo ready: yes`, fund both participant wallets in advance, and repeat the two-profile flow above on devnet.
 
 If an upload fails, inspect the existing buffer before retrying. Deployment accepts Solana CLI options after `--`, including `--use-rpc` and `--buffer <buffer-address>` to resume an existing upload.
 

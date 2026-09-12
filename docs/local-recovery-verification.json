@@ -1,0 +1,125 @@
+{
+  "network": "localnet",
+  "verifiedAt": "2026-09-12T17:09:34.082Z",
+  "program": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+  "wallets": {
+    "organizer": {
+      "address": "4zXpFAuqYoK5SMyCrW1vv32gCPgp2Nvkwoo4PDhihfGm",
+      "finalLamports": 244785240
+    },
+    "friendB": {
+      "address": "7hk48gABPhy7UykrtWefnhgPGdAyYuPWnusYXwz2gTWX",
+      "finalLamports": 244920080
+    },
+    "friendC": {
+      "address": "FRvzKTsZXWLis3QTWzyNWWQDEo35RdjgPkbJnUydvFbm",
+      "finalLamports": 239990000
+    }
+  },
+  "pots": {
+    "timeout": {
+      "address": "8y5Lw76yxWHuCKVKvK7z61ntZD7BNKJCZccBp3h9N7B2",
+      "task": "Timeout recovery rehearsal",
+      "settled": true,
+      "outcome": null,
+      "yes": ["4zXpFAuqYoK5SMyCrW1vv32gCPgp2Nvkwoo4PDhihfGm"],
+      "no": ["7hk48gABPhy7UykrtWefnhgPGdAyYuPWnusYXwz2gTWX"],
+      "remainingLamports": 5059920,
+      "transactions": [
+        {
+          "signature": "3xeWfCtV2XbUxsxJPq7VMYec6Ch9FNPhfLBFYrhfyM1fe2gz3PpWxPd8eyD8PdaJjRCw1gpRpjyw4RuYmyyP1Ubn",
+          "error": null
+        },
+        {
+          "signature": "2hEE74BGH8ydT8uLBCdezTeXJBXbfW8ZQehSJcHKKjhxUMG1pQDiFESZ8Yv7aLVHaBLj56QcQL7ugoe9uearmXTW",
+          "error": null
+        },
+        {
+          "signature": "skaTv7wfVETMQZNpoZDdTtEAn7fhmJJ6eYirSm4HQZWGwcudjYWKkMwH4dRUuuBJD5PUgoaBYULegLLyNF9efVN",
+          "error": null
+        },
+        {
+          "signature": "3QZcuUHzUCJMTHotUm4Xtyn68mZ9fqoUBAPpwatJ8cc5dyJApJfBY2jBiHjyBtemjXczDH7Mkpy4Gx2A4cepFaT5",
+          "error": null
+        }
+      ]
+    },
+    "unopposed": {
+      "address": "N6hHe6xpbebyirAAYAwmsfyGjax5eyLAJpiEqNx2CwE",
+      "task": "Unopposed failure rehearsal",
+      "settled": true,
+      "outcome": false,
+      "yes": ["7hk48gABPhy7UykrtWefnhgPGdAyYuPWnusYXwz2gTWX"],
+      "no": [],
+      "remainingLamports": 5059920,
+      "transactions": [
+        {
+          "signature": "BPhckNhfcreyhacfd4UFwQJstLpi1JwgfTSu4zCphUf5VccEmyace2eTXZBd7VTNTkKXr7MydowJhw1xTkr8CsS",
+          "error": null
+        },
+        {
+          "signature": "3pw1KisZtsWqBCtaDA7rTGLGTQi9LrExZsVnpb7Yurp4DCKCvphHK4cacDmoq71vSVnSQqkdqaYZqXE9qCE4TWyh",
+          "error": null
+        },
+        {
+          "signature": "e6nby1QKKAcPjMPnVLmHJrgCwXyw1rcRgqKMYBJrMJfTD4Xyc1H8KKvAG6ChMFnxg6teWNsYtaaXKnBDcLEgCgT",
+          "error": null
+        }
+      ]
+    },
+    "groupB": {
+      "address": "6TcbXDsjYemVmTPRCh7QL6uzakAZ85tBLTdGzSxTeSis",
+      "task": "[group:6498282b:7hk48gABPhy7UykrtWefnhgPGdAyYuPWnusYXwz2gTWX] Friend B: finish the pitch",
+      "settled": true,
+      "outcome": true,
+      "yes": ["7hk48gABPhy7UykrtWefnhgPGdAyYuPWnusYXwz2gTWX"],
+      "no": ["4zXpFAuqYoK5SMyCrW1vv32gCPgp2Nvkwoo4PDhihfGm"],
+      "remainingLamports": 5059920,
+      "transactions": [
+        {
+          "signature": "5iYNUvsP9BXv3K2T23C1VrML2Htm5aBmWwyryLkqzfHKgSP95E2PXqCASL7sJZRJ1G1TdUFCyoqorhLXxw4JoDdJ",
+          "error": null
+        },
+        {
+          "signature": "5vMJUqEBFCm48SjfuL9t2VMAEnutHKX7pG5hoMYCK9cNZKik7X3RzpjToXtdj8mGe5VqM9rJSFVoX56ThL6ghpbb",
+          "error": null
+        },
+        {
+          "signature": "2fq8d59UQ4HFasRTJcVoyDRaQb6sRwA5RRkoTSqBTGwadnsfNLsJXKeBXsnPgtWjhH9B1zoEFYQpjpoRy5T4iMVC",
+          "error": null
+        },
+        {
+          "signature": "3RxSztg5B6YN6eEeisnyiL7WrmRxeBF5Qu2V8p5vbRWj4u2HNDJpfCJHUFZTFaZ1ajAwDU92yo69mQcHs7vbYPiB",
+          "error": null
+        }
+      ]
+    },
+    "groupC": {
+      "address": "BgrhVgS1CBVAccEyHrQsQUQjme5ss6FFfgvWcfvUttno",
+      "task": "[group:6498282b:FRvzKTsZXWLis3QTWzyNWWQDEo35RdjgPkbJnUydvFbm] Friend C: finish the mockup",
+      "settled": true,
+      "outcome": false,
+      "yes": ["FRvzKTsZXWLis3QTWzyNWWQDEo35RdjgPkbJnUydvFbm"],
+      "no": ["4zXpFAuqYoK5SMyCrW1vv32gCPgp2Nvkwoo4PDhihfGm"],
+      "remainingLamports": 5059920,
+      "transactions": [
+        {
+          "signature": "2pxb8SAE81FrprDq9tRvjtBzaw1pBi5MivBoey2brmAeranMZekcQCVSFoHHbsxRZds9F2UWABrGDi4SzEzP9yhP",
+          "error": null
+        },
+        {
+          "signature": "5PtzQGpe8UTHXxukkCB4nVcAR8i1YC9BFrFUFMLHURn7Sry6EGuFjY7fcRz7AGei2315T7nrnjPzoJiqLnWwLSnM",
+          "error": null
+        },
+        {
+          "signature": "2fq8d59UQ4HFasRTJcVoyDRaQb6sRwA5RRkoTSqBTGwadnsfNLsJXKeBXsnPgtWjhH9B1zoEFYQpjpoRy5T4iMVC",
+          "error": null
+        },
+        {
+          "signature": "3RxSztg5B6YN6eEeisnyiL7WrmRxeBF5Qu2V8p5vbRWj4u2HNDJpfCJHUFZTFaZ1ajAwDU92yo69mQcHs7vbYPiB",
+          "error": null
+        }
+      ]
+    }
+  }
+}
