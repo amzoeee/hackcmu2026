@@ -26,5 +26,5 @@ jobs:
       - run: npm ci
       - name: Lint, typecheck, and build
         run: npm run check
-      - name: Test demo funding
-        run: node --import tsx --test --test-timeout=30000 tests/demo-funds.test.ts
+      - name: Test funding and RPC recovery
+        run: node --import tsx --test --test-timeout=60000 tests/demo-funds.test.ts tests/rpc-reads.test.ts

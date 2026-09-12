@@ -93,7 +93,7 @@ Program tests cover creation and exact UTF-8 limits, insufficient funds, duplica
 
 Funding endpoint tests also verify the actual devnet identity before faucet or host-key use, failed confirmations, repeat requests, and recovery after RPC failure. Run these alone with `node --import tsx --test tests/demo-funds.test.ts`.
 
-GitHub checks each push and pull request with a clean install, frontend checks, and funding endpoint tests. On-chain tests and the two-browser rehearsal still run locally.
+GitHub checks each push and pull request with a clean install, frontend checks, funding tests, and slow/unavailable RPC recovery tests. On-chain tests and the two-browser rehearsal still run locally.
 
 Keep the standalone TypeScript check: Next's built-in checker is disabled because this Next/TypeScript combination rejects valid compiler configuration output. Upstream wallet SDK dependencies still have npm audit findings; do not use forced dependency upgrades without validating wallet behavior.
 

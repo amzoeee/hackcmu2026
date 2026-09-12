@@ -19,6 +19,7 @@ import {
 import {
   getAccountabilityProgram,
   getReadOnlyAccountabilityProgram,
+  getReadOnlyConnection,
 } from "@/lib/anchor/client";
 import {
   DEVNET_GENESIS,
@@ -158,6 +159,8 @@ function actionError(error: unknown) {
       return "The transaction expired before confirmation. Refresh the pots and your balance before trying again.";
     }
     if (
+      error.name === "TimeoutError" ||
+      error.name === "AbortError" ||
       /failed to fetch|fetch failed|network request|429|too many requests/i.test(
         message,
       )
@@ -194,6 +197,8 @@ export function SolaraApp({
       : null;
   const potRequest = useRef(0);
   const balanceRequest = useRef(0);
+  const potReadInFlight = useRef(false);
+  const balanceReadInFlight = useRef(false);
   const lastLinkedPot = useRef<string | null>(null);
   const [now, setNow] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
@@ -226,6 +231,14 @@ export function SolaraApp({
         : getReadOnlyAccountabilityProgram(connection),
     [connection, wallet],
   );
+  const readConnection = useMemo(
+    () => getReadOnlyConnection(connection.rpcEndpoint),
+    [connection],
+  );
+  const readProgram = useMemo(
+    () => getReadOnlyAccountabilityProgram(readConnection),
+    [readConnection],
+  );
 
   useEffect(() => {
     if (error) errorMessage.current?.scrollIntoView({ block: "center" });
@@ -253,7 +266,9 @@ export function SolaraApp({
 
   const refreshPots = useCallback(
     async (showLoading = true) => {
+      if (!showLoading && potReadInFlight.current) return;
       const request = ++potRequest.current;
+      potReadInFlight.current = true;
       if (showLoading) setLoadingPots(true);
       try {
         if (SOLANA_NETWORK !== "devnet" && !IS_LOCALNET) {
@@ -263,10 +278,10 @@ export function SolaraApp({
           );
         }
         const [programAccount, accounts, genesis] = await Promise.all([
-          connection.getAccountInfo(program.programId, "confirmed"),
-          program.account.pot.all(),
+          readConnection.getAccountInfo(readProgram.programId, "confirmed"),
+          readProgram.account.pot.all(),
           SOLANA_NETWORK === "devnet"
-            ? connection.getGenesisHash()
+            ? readConnection.getGenesisHash()
             : Promise.resolve(null),
         ]);
         if (request !== potRequest.current) return;
@@ -292,29 +307,40 @@ export function SolaraApp({
         if (request === potRequest.current)
           setLoadError(actionError(fetchError));
       } finally {
-        if (request === potRequest.current) setLoadingPots(false);
+        if (request === potRequest.current) {
+          potReadInFlight.current = false;
+          setLoadingPots(false);
+        }
       }
     },
-    [connection, program],
+    [readConnection, readProgram],
   );
 
-  const refreshBalance = useCallback(async () => {
-    const request = ++balanceRequest.current;
-    if (!wallet) {
-      setWalletBalance(null);
-      return;
-    }
-    try {
-      const lamports = await connection.getBalance(
-        wallet.publicKey,
-        "confirmed",
-      );
-      if (request === balanceRequest.current)
-        setWalletBalance({ address: wallet.publicKey.toBase58(), lamports });
-    } catch {
-      if (request === balanceRequest.current) setWalletBalance(null);
-    }
-  }, [connection, wallet]);
+  const refreshBalance = useCallback(
+    async (force = false) => {
+      if (!force && balanceReadInFlight.current) return;
+      const request = ++balanceRequest.current;
+      if (!wallet) {
+        setWalletBalance(null);
+        return;
+      }
+      balanceReadInFlight.current = true;
+      try {
+        const lamports = await readConnection.getBalance(
+          wallet.publicKey,
+          "confirmed",
+        );
+        if (request === balanceRequest.current)
+          setWalletBalance({ address: wallet.publicKey.toBase58(), lamports });
+      } catch {
+        if (request === balanceRequest.current) setWalletBalance(null);
+      } finally {
+        if (request === balanceRequest.current)
+          balanceReadInFlight.current = false;
+      }
+    },
+    [readConnection, wallet],
+  );
 
   useEffect(() => {
     const initial = window.setTimeout(() => void refreshPots(), 0);
@@ -325,6 +351,7 @@ export function SolaraApp({
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       potRequest.current += 1;
+      potReadInFlight.current = false;
       window.clearTimeout(initial);
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
@@ -340,6 +367,7 @@ export function SolaraApp({
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       balanceRequest.current += 1;
+      balanceReadInFlight.current = false;
       window.clearTimeout(initial);
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
@@ -357,13 +385,25 @@ export function SolaraApp({
   }, [address]);
 
   const afterTransaction = useCallback(
-    async (message: string, transactionSignature?: string) => {
+    (message: string, transactionSignature?: string) => {
       setNotice(message);
       setSignature(transactionSignature ?? null);
-      await Promise.all([refreshPots(), refreshBalance()]);
+      void refreshPots();
+      void refreshBalance(true);
     },
     [refreshBalance, refreshPots],
   );
+
+  function showTransactionError(transactionError: unknown) {
+    if (
+      transactionError instanceof Error &&
+      "signature" in transactionError &&
+      typeof transactionError.signature === "string"
+    ) {
+      setSignature(transactionError.signature);
+    }
+    setError(actionError(transactionError));
+  }
 
   async function connect() {
     setError(null);
@@ -433,7 +473,7 @@ export function SolaraApp({
     setPending("fund");
     try {
       const message = await onRequestFunds();
-      await afterTransaction(message);
+      afterTransaction(message);
     } catch (fundError) {
       setError(actionError(fundError));
     } finally {
@@ -446,6 +486,7 @@ export function SolaraApp({
     if (!wallet) return connect();
     setError(null);
     setNotice(null);
+    setSignature(null);
     try {
       const stakeLamports = parseSol(stake);
       const deadlineSeconds = Math.floor(new Date(deadline).getTime() / 1000);
@@ -494,12 +535,12 @@ export function SolaraApp({
         .rpc();
       setTask("");
       setFilter("all");
-      await afterTransaction(
+      afterTransaction(
         "Pot created. Choose YES or NO below to add your stake.",
         txSignature,
       );
     } catch (createError) {
-      setError(actionError(createError));
+      showTransactionError(createError);
     } finally {
       setPending(null);
     }
@@ -509,6 +550,7 @@ export function SolaraApp({
     if (!wallet) return connect();
     setError(null);
     setNotice(null);
+    setSignature(null);
     try {
       const stakeLamports = asBigInt(pot.stake);
       if (balance !== null && BigInt(balance) < stakeLamports + 10_000n) {
@@ -523,12 +565,12 @@ export function SolaraApp({
           systemProgram: SystemProgram.programId,
         })
         .rpc();
-      await afterTransaction(
+      afterTransaction(
         `Joined ${side.toUpperCase()}. ${formatSol(pot.stake)} SOL moved from your wallet into the pot.`,
         txSignature,
       );
     } catch (joinError) {
-      setError(actionError(joinError));
+      showTransactionError(joinError);
     } finally {
       setPending(null);
     }
@@ -538,6 +580,7 @@ export function SolaraApp({
     if (!wallet) return connect();
     setError(null);
     setNotice(null);
+    setSignature(null);
     try {
       const winners = completed ? pot.yesParticipants : pot.noParticipants;
       const recipients =
@@ -563,10 +606,10 @@ export function SolaraApp({
           : winners.length === 0
             ? "No one chose this side, so every participant received a refund."
             : `${winners.length} ${winners.length === 1 ? "winner has" : "winners have"} been paid.`;
-      await afterTransaction(`${outcome}. ${payout}`, txSignature);
+      afterTransaction(`${outcome}. ${payout}`, txSignature);
       setSettlement(null);
     } catch (settleError) {
-      setError(actionError(settleError));
+      showTransactionError(settleError);
     } finally {
       setPending(null);
     }
@@ -690,8 +733,11 @@ export function SolaraApp({
         </li>
       </ol>
 
-      {notice ? (
-        <div className="message message-success" role="status">
+      {notice || signature ? (
+        <div
+          className={notice ? "message message-success" : "message"}
+          role="status"
+        >
           <div>
             {notice}
             {signature ? (
@@ -708,7 +754,10 @@ export function SolaraApp({
           <button
             className="text-button"
             type="button"
-            onClick={() => setNotice(null)}
+            onClick={() => {
+              setNotice(null);
+              setSignature(null);
+            }}
             aria-label="Dismiss update"
           >
             Dismiss
