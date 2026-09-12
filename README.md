@@ -35,6 +35,8 @@ Open [http://localhost:3001](http://localhost:3001) in two separate browser prof
 
 Localnet wallets use separate browser storage from devnet wallets. Local funding only works with an explicitly configured localnet and a loopback RPC, and it ignores any devnet funder key. Privy and wallet-extension onboarding remain devnet-only. Local rehearsal does not replace the final devnet check.
 
+The web page binds to localhost. The bundled Solana validator exposes its RPC and faucet listeners on network interfaces despite its local bind option, so run the rehearsal on a trusted network.
+
 Browser keys survive a local restart, so use **Add test SOL** to fund restored wallets on the new chain.
 
 ## Run and present on devnet

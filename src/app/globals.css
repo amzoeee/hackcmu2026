@@ -623,6 +623,17 @@ textarea:focus {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
+  .pot-records .text-button,
+  .pot-records .record-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .participants summary,
+  .pot-rules summary {
+    min-height: 44px;
+    padding-block: 12px;
+  }
 }
 
 .wallet-dialog {

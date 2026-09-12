@@ -30,6 +30,19 @@ A fresh rehearsal with the synchronized program key also exercised these cases t
 
 The page also passed a 390px mobile layout check, filtered empty states, insufficient-funds recovery, and shorthand decimal stake entry. Sharing a pot exposed a copyable link; opening it in the second profile selected and focused the correct pot even through an active-only filter. Expanded participant records showed both wallets on their recorded sides. A deliberately mismatched devnet/local RPC configuration displayed an error, disabled creation, and rejected funding with HTTP 403. The extension chooser's labeled close controls and Escape dismissal were exercised; no extension wallet was installed for a signing test.
 
+## Separate judge and smaller accounts
+
+After reducing the account allocation, a fresh UI rehearsal created a 599-byte pot with a 0.00505992 SOL local rent reserve. Wallet B created it, named wallet A as judge, and joined YES with 0.01 SOL. A did not stake. The pot appeared under A's **My pots**, and only A received settlement controls after the deadline.
+
+| UI action           | Judge A (SOL) | Participant B (SOL) |
+| ------------------- | ------------: | ------------------: |
+| Both wallets funded |    0.25000000 |          0.25000000 |
+| B creates pot       |    0.25000000 |          0.24493508 |
+| B joins YES         |    0.25000000 |          0.23493008 |
+| A settles Completed |    0.24999500 |          0.24493008 |
+
+The judge paid only the settlement fee, and the participant received the full staked pool. Both browsers displayed the outcome and updated balances automatically. Earlier balance tables above used the original, larger account allocation; devnet rent may differ from the local validator's rent.
+
 ## Local ledger identifiers
 
 - Wallet A: `4h7yKVVWgYqkLcGoGLzXSFmQVpyDBzh1LuZvfubgsjdX`
