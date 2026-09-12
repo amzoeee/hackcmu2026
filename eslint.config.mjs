@@ -8,6 +8,7 @@ export default defineConfig([
   globalIgnores([
     ".next/**",
     ".next-local/**",
+    ".next-devnet/**",
     "next-env.d.ts",
     ".tools/**",
     ".anchor/**",

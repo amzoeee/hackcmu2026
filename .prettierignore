@@ -1,6 +1,7 @@
 node_modules
 .next
 .next-local
+.next-devnet
 .tools
 .anchor
 target

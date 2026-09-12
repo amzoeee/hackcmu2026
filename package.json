@@ -13,6 +13,7 @@
     "start:lan": "next start --hostname 0.0.0.0",
     "demo:check": "bash scripts/with-tools.sh bash scripts/check-demo-readiness.sh",
     "demo:local": "bash scripts/with-tools.sh bash scripts/start-local-demo.sh",
+    "demo:devnet": "bash scripts/with-tools.sh bash scripts/start-devnet-demo.sh",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run build",
