@@ -164,6 +164,63 @@ export type Accountability = {
       "args": []
     },
     {
+      "name": "setProfile",
+      "docs": [
+        "Creates or overwrites the display name for the signing wallet."
+      ],
+      "discriminator": [
+        221,
+        221,
+        195,
+        121,
+        133,
+        71,
+        113,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "wallet"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
       "name": "settlePot",
       "discriminator": [
         120,
@@ -238,6 +295,19 @@ export type Accountability = {
         191,
         59,
         58
+      ]
+    },
+    {
+      "name": "profile",
+      "discriminator": [
+        184,
+        101,
+        165,
+        188,
+        95,
+        63,
+        127,
+        188
       ]
     }
   ],
@@ -348,14 +418,24 @@ export type Accountability = {
       "msg": "The proof link is too long."
     },
     {
-      "code": 6016,
+      "code": 6021,
       "name": "accessCodeTooLong",
       "msg": "The invite code is too long."
     },
     {
-      "code": 6017,
+      "code": 6022,
       "name": "invalidAccessCode",
       "msg": "The invite code is missing or incorrect."
+    },
+    {
+      "code": 6023,
+      "name": "nameRequired",
+      "msg": "A display name is required."
+    },
+    {
+      "code": 6024,
+      "name": "nameTooLong",
+      "msg": "The display name is too long."
     }
   ],
   "types": [
@@ -428,6 +508,22 @@ export type Accountability = {
                 ]
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "profile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
           }
         ]
       }

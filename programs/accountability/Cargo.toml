@@ -20,5 +20,5 @@ custom-heap = []
 custom-panic = []
 
 [dependencies]
-anchor-lang = "=0.32.1"
+anchor-lang = { version = "=0.32.1", features = ["init-if-needed"] }
 solana-sha256-hasher = "2.3.0"

@@ -200,6 +200,29 @@ describe("accountability pots", () => {
       .rpc();
   }
 
+  function profileAddress(wallet: PublicKey) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("profile"), wallet.toBuffer()],
+      program.programId,
+    )[0];
+  }
+
+  async function setProfile(
+    wallet: Keypair,
+    name: string,
+    profile = profileAddress(wallet.publicKey),
+  ) {
+    await program.methods
+      .setProfile(name)
+      .accountsPartial({
+        wallet: wallet.publicKey,
+        profile,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([wallet])
+      .rpc();
+  }
+
   async function waitForDeadline(deadline: number) {
     // Use the same Clock sysvar as the program, rather than assuming the
     // validator's clock matches the machine running these tests.
@@ -953,6 +976,63 @@ describe("accountability pots", () => {
       beforeMember,
     );
     assert.equal(await provider.connection.getBalance(pot), rentReserve);
+  });
+
+  it("creates, overwrites, and validates wallet profiles", async () => {
+    const wallet = Keypair.generate();
+    const other = Keypair.generate();
+    await Promise.all([fund(wallet), fund(other)]);
+    const profile = profileAddress(wallet.publicKey);
+    assert.equal(await provider.connection.getAccountInfo(profile), null);
+
+    // Invalid names never create the account.
+    await rejectsProgramError(setProfile(wallet, ""), "NameRequired");
+    await rejectsProgramError(setProfile(wallet, " \n\t "), "NameRequired");
+    await rejectsProgramError(setProfile(wallet, "x".repeat(33)), "NameTooLong");
+    assert.equal(await provider.connection.getAccountInfo(profile), null);
+
+    await setProfile(wallet, "Ada");
+    const created = await program.account.profile.fetch(profile);
+    assert.equal(created.wallet.toBase58(), wallet.publicKey.toBase58());
+    assert.equal(created.name, "Ada");
+    const info = await provider.connection.getAccountInfo(profile);
+    assert.equal(info?.data.length, 76);
+    assert.equal(
+      info?.lamports,
+      await provider.connection.getMinimumBalanceForRentExemption(76),
+    );
+
+    const longest = "🙂".repeat(8);
+    await setProfile(wallet, longest);
+    assert.equal((await program.account.profile.fetch(profile)).name, longest);
+    await setProfile(wallet, "Ada Lovelace");
+    assert.equal(
+      (await program.account.profile.fetch(profile)).name,
+      "Ada Lovelace",
+    );
+
+    // Invalid overwrites leave the stored name unchanged.
+    await rejectsProgramError(setProfile(wallet, ""), "NameRequired");
+    await rejectsProgramError(setProfile(wallet, "x".repeat(33)), "NameTooLong");
+    await rejectsProgramError(setProfile(wallet, "🙂".repeat(9)), "NameTooLong");
+    assert.equal(
+      (await program.account.profile.fetch(profile)).name,
+      "Ada Lovelace",
+    );
+
+    // Only the wallet itself can write its profile.
+    await rejectsProgramError(
+      setProfile(other, "Impostor", profile),
+      "ConstraintSeeds",
+    );
+    assert.equal(
+      (await program.account.profile.fetch(profile)).name,
+      "Ada Lovelace",
+    );
+    assert.equal(
+      await provider.connection.getAccountInfo(profileAddress(other.publicKey)),
+      null,
+    );
   });
 
   it("settles an empty pot without a payout and rejects late joins", async () => {

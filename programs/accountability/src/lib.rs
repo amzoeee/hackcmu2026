@@ -10,6 +10,7 @@ const MAX_TASK_LENGTH: usize = 160;
 const MAX_PARTICIPANTS: usize = 10;
 const MAX_PROOF_LENGTH: usize = 200;
 const MAX_ACCESS_CODE_LENGTH: usize = 64;
+const MAX_NAME_LENGTH: usize = 32;
 
 #[constant]
 pub const SETTLEMENT_GRACE_SECONDS: i64 = 300;
@@ -76,6 +77,16 @@ pub mod accountability {
         require!(!uri.trim().is_empty(), AccountabilityError::ProofRequired);
         require!(uri.len() <= MAX_PROOF_LENGTH, AccountabilityError::ProofTooLong);
         pot.proof_uri = uri;
+        Ok(())
+    }
+
+    /// Creates or overwrites the display name for the signing wallet.
+    pub fn set_profile(ctx: Context<SetProfile>, name: String) -> Result<()> {
+        require!(!name.trim().is_empty(), AccountabilityError::NameRequired);
+        require!(name.len() <= MAX_NAME_LENGTH, AccountabilityError::NameTooLong);
+        let profile = &mut ctx.accounts.profile;
+        profile.wallet = ctx.accounts.wallet.key();
+        profile.name = name;
         Ok(())
     }
 
@@ -304,6 +315,22 @@ pub struct SubmitProof<'info> {
     pub pot: Account<'info, Pot>,
 }
 
+// The seeds tie each profile to its wallet, so only that wallet can write it.
+#[derive(Accounts)]
+pub struct SetProfile<'info> {
+    #[account(mut)]
+    pub wallet: Signer<'info>,
+    #[account(
+        init_if_needed,
+        payer = wallet,
+        space = Profile::SPACE,
+        seeds = [b"profile", wallet.key().as_ref()],
+        bump
+    )]
+    pub profile: Account<'info, Profile>,
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 pub struct Pot {
     pub creator: Pubkey,
@@ -341,6 +368,16 @@ impl Pot {
         + MAX_PROOF_LENGTH
         + 1
         + 32;
+}
+
+#[account]
+pub struct Profile {
+    pub wallet: Pubkey,
+    pub name: String,
+}
+
+impl Profile {
+    pub const SPACE: usize = 8 + 32 + 4 + MAX_NAME_LENGTH;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
@@ -397,6 +434,10 @@ pub enum AccountabilityError {
     AccessCodeTooLong,
     #[msg("The invite code is missing or incorrect.")]
     InvalidAccessCode,
+    #[msg("A display name is required.")]
+    NameRequired,
+    #[msg("The display name is too long.")]
+    NameTooLong,
 }
 
 #[cfg(test)]
