@@ -9,7 +9,10 @@ import {
   type Connection,
 } from "@solana/web3.js";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { getAccountabilityProgram } from "@/lib/anchor/client";
+import {
+  getAccountabilityProgram,
+  getReadOnlyAccountabilityProgram,
+} from "@/lib/anchor/client";
 
 type PotAccount = {
   creator: PublicKey;
@@ -117,16 +120,11 @@ export function SolaraApp({
   const [judge, setJudge] = useState("");
 
   const program = useMemo(
-    () => (wallet ? getAccountabilityProgram(connection, wallet) : null),
+    () => (wallet ? getAccountabilityProgram(connection, wallet) : getReadOnlyAccountabilityProgram(connection)),
     [connection, wallet],
   );
 
   const refreshPots = useCallback(async () => {
-    if (!program) {
-      setPots([]);
-      setLoadingPots(false);
-      return;
-    }
     setLoadingPots(true);
     try {
       const accounts = (await program.account.pot.all()) as Array<{
