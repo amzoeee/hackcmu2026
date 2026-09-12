@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 import {
   commandDefinitions,
   executeCommand,
+  parsePotPageId,
   parsePotAddress,
+  visiblePotPage,
 } from "../src/commands";
 import type { Pot } from "../src/pots";
 import type { PotSource } from "../src/source";
@@ -57,6 +59,26 @@ describe("parsePotAddress", () => {
     assert.equal(parsePotAddress(`${APP_URL}/#pot-${address}`), address);
     assert.equal(parsePotAddress("not an address"), null);
     assert.equal(parsePotAddress(""), null);
+  });
+
+  describe("pot page navigation", () => {
+    it("round-trips a filter and page from a button id", () => {
+      assert.deepEqual(parsePotPageId("pots:settled:3"), {
+        filter: "settled",
+        page: 3,
+      });
+      assert.equal(parsePotPageId("pots:all:not-a-page"), null);
+    });
+
+    it("clamps a page after pots change", () => {
+      const result = visiblePotPage(
+        [fixtures.active(), fixtures.settledYes()],
+        "all",
+        99,
+      );
+      assert.equal(result.page, 1);
+      assert.equal(result.visible.length, 2);
+    });
   });
 });
 

@@ -1,4 +1,10 @@
-import { escapeMarkdown } from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  escapeMarkdown,
+} from "discord.js";
 import {
   computePayout,
   filterPots,
@@ -7,6 +13,7 @@ import {
   participantCount,
   potLink,
   potStatus,
+  sortNewestFirst,
   shorten,
   type Payout,
   type Pot,
@@ -21,6 +28,11 @@ export type FormatContext = {
   appUrl: string;
   /** Unix seconds; passed in so formatting is deterministic in tests. */
   nowSeconds: number;
+};
+
+export type PotListView = {
+  embed: EmbedBuilder;
+  components: ActionRowBuilder<ButtonBuilder>[];
 };
 
 /** Discord renders `<t:unix:f>` as a local date and `<t:unix:R>` as "in 5 minutes". */
@@ -167,6 +179,100 @@ export function formatPotDetails(pot: Pot, context: FormatContext) {
     `Address: \`${pot.address}\``,
     potLink(context.appUrl, pot.address),
   ].join("\n");
+}
+
+/** Render one pot as a compact, website-like Discord embed. */
+export function formatPotEmbed(
+  pot: Pot,
+  context: FormatContext,
+  position: number,
+  total: number,
+) {
+  const status = potStatus(pot, context.nowSeconds);
+  const count = participantCount(pot);
+  const pool = pot.stake * BigInt(count);
+  const payout =
+    status.kind === "settled"
+      ? describePayout(computePayout(pot, status.outcome), "settled")
+      : `YES: ${describePayout(computePayout(pot, true), "projected")}\nNO: ${describePayout(computePayout(pot, false), "projected")}`;
+
+  const embed = new EmbedBuilder()
+    .setTitle(pot.task)
+    .setURL(potLink(context.appUrl, pot.address))
+    .setDescription(describeStatus(status))
+    .addFields(
+      {
+        name: "Stake",
+        value: `${formatSol(pot.stake)} SOL each\n${formatSol(pool)} SOL staked`,
+        inline: true,
+      },
+      {
+        name: "Participants",
+        value: `YES ${pot.yesParticipants.length} · NO ${pot.noParticipants.length}\n${count}/${MAX_PARTICIPANTS} places filled`,
+        inline: true,
+      },
+      {
+        name: "Deadline",
+        value: discordTimestamp(pot.deadline),
+        inline: false,
+      },
+      {
+        name: "Judge",
+        value: `\`${shorten(pot.judge)}\``,
+        inline: true,
+      },
+      {
+        name: "Created by",
+        value: `\`${shorten(pot.creator)}\``,
+        inline: true,
+      },
+      {
+        name: status.kind === "settled" ? "Payout" : "Projected payout",
+        value: payout,
+        inline: false,
+      },
+    )
+    .setFooter({ text: `Pot ${position + 1} of ${total} · ${pot.address}` });
+
+  if (status.kind === "settled") {
+    embed.setColor(status.outcome ? 0x2e8b57 : 0xc0392b);
+  } else if (status.kind === "closed") {
+    embed.setColor(0xd97706);
+  } else {
+    embed.setColor(0x2563eb);
+  }
+  return embed;
+}
+
+/** Build the paginated `/pots` response. */
+export function formatPotListView(
+  pots: Pot[],
+  filter: PotFilter,
+  context: FormatContext,
+  page: number,
+): PotListView | null {
+  const visible = sortNewestFirst(filterPots(pots, filter));
+  const pot = visible[page];
+  if (!pot) return null;
+
+  const previous = Math.max(0, page - 1);
+  const next = Math.min(visible.length - 1, page + 1);
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`pots:${filter}:${previous}`)
+      .setLabel("Previous")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page === 0),
+    new ButtonBuilder()
+      .setCustomId(`pots:${filter}:${next}`)
+      .setLabel("Next")
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(page === visible.length - 1),
+  );
+  return {
+    embed: formatPotEmbed(pot, context, page, visible.length),
+    components: [row],
+  };
 }
 
 /** Posted when a pot appears that the bot has not seen before. */

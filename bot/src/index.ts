@@ -1,10 +1,15 @@
 import { Client, Events, GatewayIntentBits, MessageFlags } from "discord.js";
 import { createChainReader } from "./chain";
-import { executeCommand } from "./commands";
+import {
+  executeCommand,
+  parsePotPageId,
+  visiblePotPage,
+} from "./commands";
 import { loadEnvFile, readConfig, required } from "./config";
 import {
   formatNewPotAnnouncement,
   formatPotDetails,
+  formatPotListView,
   formatPotList,
   formatSettledAnnouncement,
 } from "./format";
@@ -118,13 +123,81 @@ if (config.dryRun) {
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
+    if (interaction.isButton()) {
+      const pageId = parsePotPageId(interaction.customId);
+      if (!pageId) return;
+      try {
+        await interaction.deferUpdate();
+        const pots = await source.get();
+        const { page } = visiblePotPage(
+          pots,
+          pageId.filter,
+          pageId.page,
+        );
+        const view = formatPotListView(
+          pots,
+          pageId.filter,
+          formatContext(),
+          page,
+        );
+        if (!view) {
+          await interaction.editReply({
+            content: "No pots match that filter anymore.",
+            embeds: [],
+            components: [],
+          });
+          return;
+        }
+        await interaction.editReply({
+          content: "",
+          embeds: [view.embed],
+          components: view.components,
+        });
+      } catch (error) {
+        log.warn(`Pot page change failed: ${describeError(error)}`);
+      }
+      return;
+    }
     if (!interaction.isChatInputCommand()) return;
     try {
       // Reads can take up to the RPC timeout; Discord wants an acknowledgement within 3s.
       await interaction.deferReply();
+      const options = {
+        getString: (name: string) => interaction.options.getString(name),
+      };
+      if (interaction.commandName === "pots") {
+        const requested = options.getString("filter");
+        const filter =
+          requested === "active" || requested === "settled" || requested === "all"
+            ? requested
+            : "all";
+        const view = formatPotListView(
+          await source.get(),
+          filter,
+          formatContext(),
+          0,
+        );
+        if (view) {
+          await interaction.editReply({
+            content: "",
+            embeds: [view.embed],
+            components: view.components,
+          });
+        } else {
+          const [empty] = await executeCommand("pots", options, {
+            source,
+            appUrl: config.appUrl,
+          });
+          await interaction.editReply({
+            content: empty ?? "No pots yet.",
+            allowedMentions,
+          });
+        }
+        return;
+      }
       const [first, ...rest] = await executeCommand(
         interaction.commandName,
-        { getString: (name) => interaction.options.getString(name) },
+        options,
         { source, appUrl: config.appUrl },
       );
       await interaction.editReply({

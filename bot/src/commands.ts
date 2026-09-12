@@ -1,10 +1,31 @@
 import { PublicKey } from "@solana/web3.js";
 import { SlashCommandBuilder } from "discord.js";
 import { formatPotDetails, formatPotList } from "./format";
-import type { Pot, PotFilter } from "./pots";
+import { filterPots, sortNewestFirst, type Pot, type PotFilter } from "./pots";
 import type { PotSource } from "./source";
 
 const POT_FILTERS: readonly PotFilter[] = ["active", "settled", "all"];
+
+export function parsePotPageId(customId: string) {
+  const match = /^pots:(active|settled|all):(\d+)$/.exec(customId);
+  if (!match) return null;
+  return {
+    filter: match[1] as PotFilter,
+    page: Number(match[2]),
+  };
+}
+
+export function visiblePotPage(
+  pots: Pot[],
+  filter: PotFilter,
+  page: number,
+) {
+  const visible = sortNewestFirst(filterPots(pots, filter));
+  return {
+    visible,
+    page: Math.max(0, Math.min(page, visible.length - 1)),
+  };
+}
 
 export const commandDefinitions = [
   new SlashCommandBuilder()

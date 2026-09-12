@@ -6,6 +6,7 @@ import {
   formatNewPotAnnouncement,
   formatPotDetails,
   formatPotEntry,
+  formatPotListView,
   formatPotList,
   formatSettledAnnouncement,
 } from "../src/format";
@@ -158,6 +159,24 @@ describe("formatPotList", () => {
     assert.deepEqual(formatPotList([], "all", context), [
       `No pots yet. Create one in the app: ${APP_URL}`,
     ]);
+  });
+
+  describe("formatPotListView", () => {
+    it("renders one pot with navigation controls", () => {
+      const pots = [fixtures.active(), fixtures.settledYes()];
+      const view = formatPotListView(pots, "all", context, 0);
+      assert.ok(view);
+      assert.equal(view.embed.data.title, "Present Solara's live devnet demo");
+      assert.equal(view.embed.data.fields?.find((field) => field.name === "Participants")?.value.includes("YES 2"), true);
+      const buttons = view.components[0]?.components.map((button) =>
+        "custom_id" in button.data ? button.data.custom_id : undefined,
+      );
+      assert.deepEqual(buttons, ["pots:all:0", "pots:all:1"]);
+    });
+
+    it("returns no view for an empty filter", () => {
+      assert.equal(formatPotListView([], "settled", context, 0), null);
+    });
   });
 
   it("applies the filter and counts the visible pots", () => {
