@@ -173,6 +173,8 @@ export function FinanceYourResponsibilitiesApp({
   const balanceRequest = useRef(0);
   const potReadInFlight = useRef(false);
   const balanceReadInFlight = useRef(false);
+  // The published IDL only changes on deploy, so verify it once per connection.
+  const recoveryIdlVerified = useRef<boolean | null>(null);
   const lastLinkedPot = useRef<string | null>(null);
   const [now, setNow] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
@@ -274,9 +276,12 @@ export function FinanceYourResponsibilitiesApp({
             SOLANA_NETWORK === "devnet"
               ? readConnection.getGenesisHash()
               : Promise.resolve(null),
-            SOLANA_NETWORK === "devnet"
-              ? Program.fetchIdl(readProgram.programId, readProgram.provider)
-              : Promise.resolve(null),
+            SOLANA_NETWORK === "devnet" && recoveryIdlVerified.current !== true
+              ? // A failed IDL read must not discard pots that loaded correctly.
+                Program.fetchIdl(readProgram.programId, readProgram.provider).catch(
+                  () => undefined,
+                )
+              : Promise.resolve(undefined),
           ]);
         if (request !== potRequest.current) return;
         if (SOLANA_NETWORK === "devnet" && genesis !== DEVNET_GENESIS) {
@@ -286,21 +291,23 @@ export function FinanceYourResponsibilitiesApp({
             "The configured connection is not Solana devnet. Ask the host to correct the RPC setting.",
           );
         }
-        const compatible =
-          IS_LOCALNET ||
-          Boolean(
+        if (SOLANA_NETWORK === "devnet" && deployedIdl !== undefined) {
+          // null means the IDL account is absent; undefined means the read failed.
+          recoveryIdlVerified.current = Boolean(
             deployedIdl?.instructions.some(
               (instruction) => instruction.name === "refund_pot",
             ) &&
-            deployedIdl.constants?.some(
-              (constant) =>
-                constant.name === "SETTLEMENT_GRACE_SECONDS" &&
-                Number(constant.value) === SETTLEMENT_GRACE_SECONDS,
-            ),
+              deployedIdl.constants?.some(
+                (constant) =>
+                  constant.name === "SETTLEMENT_GRACE_SECONDS" &&
+                  Number(constant.value) === SETTLEMENT_GRACE_SECONDS,
+              ),
           );
+        }
+        const compatible = IS_LOCALNET || recoveryIdlVerified.current === true;
         setProgramReady(Boolean(programAccount?.executable) && compatible);
         setLoadError(
-          programAccount?.executable && !compatible
+          programAccount?.executable && recoveryIdlVerified.current === false
             ? "The deployed program needs the settlement recovery upgrade. Ask the host to deploy the current program and IDL before staking or settling."
             : null,
         );
@@ -353,6 +360,7 @@ export function FinanceYourResponsibilitiesApp({
   );
 
   useEffect(() => {
+    recoveryIdlVerified.current = null;
     const initial = window.setTimeout(() => void refreshPots(), 0);
     const interval = window.setInterval(() => void refreshPots(false), 8_000);
     const refreshWhenVisible = () => {
