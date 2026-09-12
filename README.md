@@ -53,13 +53,21 @@ npm run dev
 
 Open **[http://localhost:3000](http://localhost:3000)** in your browser. Leave the terminal running. Press **Ctrl+C** in that terminal to stop the server.
 
-Without `NEXT_PUBLIC_PRIVY_APP_ID`, click **Start demo**. Solara creates a devnet-only key in that browser and asks the devnet faucet for 1 SOL. The key persists in local storage, so separate browser profiles and LAN devices behave as separate users. No extension, account, or seed phrase is required. **Use wallet extension** remains available as a secondary path.
+Without `NEXT_PUBLIC_PRIVY_APP_ID`, click **Start demo**. Solara creates a devnet-only key in that browser and asks the devnet faucet for 0.25 SOL. The key persists in local storage, so separate browser profiles and LAN devices behave as separate users. No extension, account, or seed phrase is required. **Use wallet extension** remains available as a secondary path.
 
-If the public faucet is rate-limited, fund `.wallets/deployer.json` and set `SOLARA_DEMO_FUNDER_KEYPAIR=.wallets/deployer.json` in `.env.local`. The server will transfer 1 devnet SOL to low-balance demo wallets. This route is hard-gated to devnet, and the private key stays on the host. Never configure it with a mainnet keypair.
+If the public faucet is rate-limited, fund `.wallets/deployer.json` and set `SOLARA_DEMO_FUNDER_KEYPAIR=.wallets/deployer.json` in `.env.local`. The server will transfer 0.25 devnet SOL to low-balance demo wallets. This route is hard-gated to devnet, and the private key stays on the host. Never configure it with a mainnet keypair.
 
 No environment file is required. The app uses the public devnet RPC by default. If you later need a different devnet RPC, copy `.env.example` to `.env.local`, change `NEXT_PUBLIC_SOLANA_RPC_URL` and `NEXT_PUBLIC_SOLANA_WS_URL`, and restart the server. A keypair path is safe to put there because `.env.local` is ignored; never put the private-key contents in a `NEXT_PUBLIC_` variable.
 
 ## Run with multiple people on the LAN
+
+Check the host before inviting participants:
+
+```sh
+npm run demo:check
+```
+
+The check confirms the configured program is deployed, prints the deployer balance, warns if the guest-funding reserve is low, and prints the LAN URL when it can detect one.
 
 Start a development server that listens on every network interface:
 
@@ -130,10 +138,12 @@ The frontend uses **devnet**. Automated program tests use **localnet**, a tempor
 
 ## Devnet deployment
 
-1. Run `npm run anchor:deploy:devnet` with `.wallets/deployer.json` funded on devnet.
-2. Put the same deployed program address in `Anchor.toml` and regenerate the IDL with `npm run anchor:build` if it changes.
-3. Add `NEXT_PUBLIC_PRIVY_APP_ID` to `.env.local`, or use two funded browser wallets.
-4. Create a short-deadline pot, have two wallets take opposite sides, and settle from the judge wallet after the deadline.
+1. Fund the address printed by `npm run demo:check` with at least 1.15 devnet SOL for the current program build. Keep another 0.6 SOL if the host will fund two guest wallets.
+2. Run `npm run anchor:deploy:devnet`.
+3. Run `npm run demo:check` again and require `Demo ready: yes`.
+4. Put the same deployed program address in `Anchor.toml` and regenerate the IDL with `npm run anchor:build` if it changes.
+5. Add `NEXT_PUBLIC_PRIVY_APP_ID` to `.env.local`, or use the built-in demo wallets.
+6. Create a short-deadline pot, have two wallets take opposite sides, and settle from the judge wallet after the deadline.
 
 ## Known setup notes
 
