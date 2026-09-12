@@ -101,6 +101,10 @@ npm run start:lan
 
 Share the host's LAN URL printed by `npm run demo:check` and allow inbound port 3000 if needed. The local rehearsal command stays on loopback; use the devnet server for LAN participation.
 
+## Discord bot (read-only)
+
+`bot/` contains an optional Discord bot that answers `/pots` and `/pot <address>` and announces new and settled pots in a channel. It reads the program through the generated IDL, holds no keys, and is its own npm package. Run `cd bot && npm ci && npm run dry-run` to print what it would post without a Discord token. Setup, the invite URL, and the environment variables are in [bot/README.md](bot/README.md).
+
 ## Verify changes
 
 ```sh
@@ -128,8 +132,9 @@ Keep the standalone TypeScript check: Next's built-in checker is disabled becaus
 | Styling                                     | `src/app/globals.css`                                                        |
 | Anchor client and generated types           | `src/lib/anchor/`                                                            |
 | On-chain program                            | `programs/accountability/src/lib.rs`                                         |
-| Program tests                               | `tests/program/accountability.test.ts`                                               |
+| Program tests                               | `tests/program/accountability.test.ts`                                       |
 | Tooling, deployment, and rehearsal commands | `scripts/`                                                                   |
+| Discord bot (read-only)                     | `bot/`                                                                       |
 | Prototype scope and working instructions    | `AGENTS.md`                                                                  |
 
 Run `npm run anchor:build` to regenerate the client after Rust changes; do not edit `src/lib/anchor/generated/` by hand. Keep generated clients in Git so frontend-only installs can build. Never commit `.wallets/`, `.tools/`, or `target/`. Back up `.wallets/accountability-program.json` and the deployer key privately; the copy under `target/deploy/` is restored automatically from the durable program key.
