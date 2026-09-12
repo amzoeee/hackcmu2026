@@ -2,7 +2,7 @@
 
 A prototype where a trusted group stakes test SOL on whether someone completes a task. A named judge settles after the deadline, and winners receive the pot in one transaction.
 
-The original program is deployed on Solana devnet, and its complete two-browser demo passed there: separate funded wallets, pot creation, opposite-side stakes, judge settlement after the deadline, and visible SOL payouts. The [browser verification record](docs/browser-verification.md) contains the balances and public transaction links. Local rehearsal and failure-recovery checks also passed. The settlement recovery and group challenge changes have passed the [local browser rehearsal](docs/recovery-verification.md). A program upgrade and fresh devnet rehearsal are required before using these new rules there.
+The program and matching IDL are deployed on Solana devnet. The production UI passed the two-browser create/join/payout flow and a three-wallet check of unopposed forfeitures, timeout refunds, and independent group verdicts. The [recovery and group verification record](docs/recovery-verification.md) contains public transaction links and balances; the [original browser verification](docs/browser-verification.md) records the earlier demo. Local rehearsal and automated failure-recovery checks also passed.
 
 ## Settlement and recovery
 

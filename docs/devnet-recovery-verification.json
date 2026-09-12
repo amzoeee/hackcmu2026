@@ -1,0 +1,1162 @@
+{
+  "startedAt": "2026-09-12T17:39:01.323Z",
+  "network": "devnet",
+  "rpcOrigin": "https://api.devnet.solana.com",
+  "commitment": "confirmed",
+  "note": "All reads are public RPC reads. Balances are lamports; transaction deltas include transaction fees and account rent. Current account snapshots and transaction histories are collected at successive slots, not atomically. Duplicate histories, the full published IDL, logs, and unchanged transaction balances are omitted from this checked-in record.",
+  "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+  "program": {
+    "executable": true,
+    "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+    "programDataAddress": "9nWtGM3ZSFpMVGxAfdAhfSG9NLLUUshv222Lp1JoheXz",
+    "deploymentSlot": "497295293",
+    "upgradeAuthority": "F6VRDFcvPVNmdaWcCeWkQFfJcZQBystcNgaMrp3kkX5t",
+    "localElfPath": "target/deploy/accountability.so",
+    "localElfBytes": 178048,
+    "deployedCapacityBytes": 181256,
+    "localElfSha256": "4d273bfc26966782b6a563b166d00a1a8d3fc0360d68d99dd32f7537edf9ceff",
+    "deployedElfPrefixSha256": "4d273bfc26966782b6a563b166d00a1a8d3fc0360d68d99dd32f7537edf9ceff",
+    "exactElfPrefixMatch": true,
+    "paddingBytes": 3208,
+    "allPaddingZero": true,
+    "bytecodeVerified": true,
+    "upgradeTransaction": "W3bFBUNt8bx55BdmQbwHugG92LQPuFECecMu4mkpKmxUhS6M5ezJZTsDaYjZ33kRsqkLTyXAR5W5HxcJzHgqemt"
+  },
+  "publishedIdl": {
+    "refundPotPresent": true,
+    "graceSeconds": "300",
+    "sha256": "66a1cadb5af8697964f0c881a31180af0fa86c7beba09f067f27ab72bf9110ed",
+    "instructions": ["create_pot", "join_pot", "refund_pot", "settle_pot"]
+  },
+  "wallets": {
+    "A": {
+      "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+      "lamports": "255177360",
+      "snapshotSlot": 497300579
+    },
+    "B": {
+      "address": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+      "lamports": "236281840",
+      "snapshotSlot": 497300589
+    },
+    "C": {
+      "address": "D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd",
+      "lamports": "239990000",
+      "snapshotSlot": 497300597
+    }
+  },
+  "pots": [
+    {
+      "address": "E7Exro5HUy1FKqChnnDAwBQUAA7y1RMzRH7B6AT7jpXo",
+      "snapshotSlot": 497300530,
+      "owner": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+      "dataBytes": 599,
+      "lamports": "3693160",
+      "minimumRentLamports": "3693160",
+      "lamportsAboveRent": "0",
+      "account": {
+        "creator": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+        "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+        "identifier": "4951310781751609804",
+        "task": "[group:23a1954d:9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n] Devnet group: B finishes the presentation",
+        "stake": "10000000",
+        "deadline": "1789234531",
+        "createdAt": "1789234234",
+        "yesParticipants": ["9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n"],
+        "noParticipants": ["AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"],
+        "settled": true,
+        "outcome": true
+      }
+    },
+    {
+      "address": "AAkamzFvdrP5PmXgvZa54wUYcdBkw7yz5Gx4TUxNyjzM",
+      "snapshotSlot": 497300543,
+      "owner": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+      "dataBytes": 599,
+      "lamports": "3693160",
+      "minimumRentLamports": "3693160",
+      "lamportsAboveRent": "0",
+      "account": {
+        "creator": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+        "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+        "identifier": "4951310781751609805",
+        "task": "[group:23a1954d:D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd] Devnet group: C rehearses the demo",
+        "stake": "10000000",
+        "deadline": "1789234531",
+        "createdAt": "1789234234",
+        "yesParticipants": ["D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd"],
+        "noParticipants": ["AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"],
+        "settled": true,
+        "outcome": false
+      }
+    },
+    {
+      "address": "27Abqy7UMBmNhjYzEUfwJ7P5qNofZk1cXijjMyj9M2ZX",
+      "snapshotSlot": 497300553,
+      "owner": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+      "dataBytes": 599,
+      "lamports": "3693160",
+      "minimumRentLamports": "3693160",
+      "lamportsAboveRent": "0",
+      "account": {
+        "creator": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+        "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+        "identifier": "1789234262465",
+        "task": "Devnet timeout: judge misses the grace window",
+        "stake": "10000000",
+        "deadline": "1789234380",
+        "createdAt": "1789234262",
+        "yesParticipants": ["AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"],
+        "noParticipants": ["9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n"],
+        "settled": true,
+        "outcome": null
+      }
+    },
+    {
+      "address": "G3X6wMLnVmHuEmaz734PzQJHFw3nUTwGgR9vHPkwgqke",
+      "snapshotSlot": 497300562,
+      "owner": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+      "dataBytes": 599,
+      "lamports": "3693160",
+      "minimumRentLamports": "3693160",
+      "lamportsAboveRent": "0",
+      "account": {
+        "creator": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+        "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+        "identifier": "1789234247891",
+        "task": "Devnet unopposed: deliver the notes",
+        "stake": "10000000",
+        "deadline": "1789234367",
+        "createdAt": "1789234247",
+        "yesParticipants": ["9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n"],
+        "noParticipants": [],
+        "settled": true,
+        "outcome": false
+      }
+    },
+    {
+      "address": "67AmRtgaWuMj87ugagxoBUZHzTr1Kub8VtHgTYmGiX4U",
+      "snapshotSlot": 497300571,
+      "owner": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+      "dataBytes": 599,
+      "lamports": "3693160",
+      "minimumRentLamports": "3693160",
+      "lamportsAboveRent": "0",
+      "account": {
+        "creator": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+        "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+        "identifier": "1789234314096",
+        "task": "Devnet core: complete the two-wallet payout",
+        "stake": "10000000",
+        "deadline": "1789234432",
+        "createdAt": "1789234314",
+        "yesParticipants": ["AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"],
+        "noParticipants": ["9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n"],
+        "settled": true,
+        "outcome": true
+      }
+    }
+  ],
+  "transactions": [
+    {
+      "signature": "5SKiAmFgPn4kKrW2VQJwKfW5L4yf5pA3PhijntoB9FmnFC6nXP6GmZr4YgXNRzKTzQTrEqnXqfDfzZFXnxtNsAGV",
+      "explorerUrl": "https://explorer.solana.com/tx/5SKiAmFgPn4kKrW2VQJwKfW5L4yf5pA3PhijntoB9FmnFC6nXP6GmZr4YgXNRzKTzQTrEqnXqfDfzZFXnxtNsAGV?cluster=devnet",
+      "slot": 497297144,
+      "blockTime": 1789234189,
+      "timestamp": "2026-09-12T17:29:49.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 150,
+      "instructions": [
+        {
+          "programAddress": "11111111111111111111111111111111",
+          "accounts": [
+            "F6VRDFcvPVNmdaWcCeWkQFfJcZQBystcNgaMrp3kkX5t",
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"
+          ],
+          "decoded": null
+        }
+      ],
+      "balances": [
+        {
+          "address": "F6VRDFcvPVNmdaWcCeWkQFfJcZQBystcNgaMrp3kkX5t",
+          "signer": true,
+          "writable": true,
+          "preLamports": "5564290760",
+          "postLamports": "5314285760",
+          "deltaLamports": "-250005000"
+        },
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": false,
+          "writable": true,
+          "preLamports": "0",
+          "postLamports": "250000000",
+          "deltaLamports": "250000000"
+        }
+      ]
+    },
+    {
+      "signature": "3XwZwwiNz2FWGUy4ZkbQZia2KBN4KXyA3krwrtCSmAgpzyn1HEhJiy36yFFcHGsA29JWSigyiYVxuMNK8quJKLLt",
+      "explorerUrl": "https://explorer.solana.com/tx/3XwZwwiNz2FWGUy4ZkbQZia2KBN4KXyA3krwrtCSmAgpzyn1HEhJiy36yFFcHGsA29JWSigyiYVxuMNK8quJKLLt?cluster=devnet",
+      "slot": 497297144,
+      "blockTime": 1789234189,
+      "timestamp": "2026-09-12T17:29:49.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 150,
+      "instructions": [
+        {
+          "programAddress": "11111111111111111111111111111111",
+          "accounts": [
+            "F6VRDFcvPVNmdaWcCeWkQFfJcZQBystcNgaMrp3kkX5t",
+            "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n"
+          ],
+          "decoded": null
+        }
+      ],
+      "balances": [
+        {
+          "address": "F6VRDFcvPVNmdaWcCeWkQFfJcZQBystcNgaMrp3kkX5t",
+          "signer": true,
+          "writable": true,
+          "preLamports": "5814295760",
+          "postLamports": "5564290760",
+          "deltaLamports": "-250005000"
+        },
+        {
+          "address": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+          "signer": false,
+          "writable": true,
+          "preLamports": "0",
+          "postLamports": "250000000",
+          "deltaLamports": "250000000"
+        }
+      ]
+    },
+    {
+      "signature": "2RpZzrcmxq6feAeiY61yxmn9dghu2iYvP1FgKQ3J6FyLn5vcrc8sH4uGo42cU3kLAyPTK5k5rgkenAq2DP48gpoT",
+      "explorerUrl": "https://explorer.solana.com/tx/2RpZzrcmxq6feAeiY61yxmn9dghu2iYvP1FgKQ3J6FyLn5vcrc8sH4uGo42cU3kLAyPTK5k5rgkenAq2DP48gpoT?cluster=devnet",
+      "slot": 497297144,
+      "blockTime": 1789234189,
+      "timestamp": "2026-09-12T17:29:49.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 150,
+      "instructions": [
+        {
+          "programAddress": "11111111111111111111111111111111",
+          "accounts": [
+            "F6VRDFcvPVNmdaWcCeWkQFfJcZQBystcNgaMrp3kkX5t",
+            "D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd"
+          ],
+          "decoded": null
+        }
+      ],
+      "balances": [
+        {
+          "address": "F6VRDFcvPVNmdaWcCeWkQFfJcZQBystcNgaMrp3kkX5t",
+          "signer": true,
+          "writable": true,
+          "preLamports": "6064300760",
+          "postLamports": "5814295760",
+          "deltaLamports": "-250005000"
+        },
+        {
+          "address": "D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd",
+          "signer": false,
+          "writable": true,
+          "preLamports": "0",
+          "postLamports": "250000000",
+          "deltaLamports": "250000000"
+        }
+      ]
+    },
+    {
+      "signature": "5xwh9rWBGKbtCJKM49petDmLZYCKPkRpyFV8RFav11rMunXhhxiWChDosR4vKmGriJR3XnXgqNHrAUShme3pAXzK",
+      "explorerUrl": "https://explorer.solana.com/tx/5xwh9rWBGKbtCJKM49petDmLZYCKPkRpyFV8RFav11rMunXhhxiWChDosR4vKmGriJR3XnXgqNHrAUShme3pAXzK?cluster=devnet",
+      "slot": 497297417,
+      "blockTime": 1789234234,
+      "timestamp": "2026-09-12T17:30:34.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 24670,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "E7Exro5HUy1FKqChnnDAwBQUAA7y1RMzRH7B6AT7jpXo",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "createPot",
+            "data": {
+              "identifier": "4951310781751609804",
+              "task": "[group:23a1954d:9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n] Devnet group: B finishes the presentation",
+              "stake": "10000000",
+              "deadline": "1789234531",
+              "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"
+            }
+          }
+        },
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "AAkamzFvdrP5PmXgvZa54wUYcdBkw7yz5Gx4TUxNyjzM",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "createPot",
+            "data": {
+              "identifier": "4951310781751609805",
+              "task": "[group:23a1954d:D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd] Devnet group: C rehearses the demo",
+              "stake": "10000000",
+              "deadline": "1789234531",
+              "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "250000000",
+          "postLamports": "242608680",
+          "deltaLamports": "-7391320"
+        },
+        {
+          "address": "AAkamzFvdrP5PmXgvZa54wUYcdBkw7yz5Gx4TUxNyjzM",
+          "signer": false,
+          "writable": true,
+          "preLamports": "0",
+          "postLamports": "3693160",
+          "deltaLamports": "3693160"
+        },
+        {
+          "address": "E7Exro5HUy1FKqChnnDAwBQUAA7y1RMzRH7B6AT7jpXo",
+          "signer": false,
+          "writable": true,
+          "preLamports": "0",
+          "postLamports": "3693160",
+          "deltaLamports": "3693160"
+        }
+      ]
+    },
+    {
+      "signature": "5EXH3gH4581u72GLP4V6LVRydN4Kssc5pxapxKknkhqVVJWW5dLtwvPEkcurv2syT9ZRYHzr9Pa45bUmpu2QR6Jc",
+      "explorerUrl": "https://explorer.solana.com/tx/5EXH3gH4581u72GLP4V6LVRydN4Kssc5pxapxKknkhqVVJWW5dLtwvPEkcurv2syT9ZRYHzr9Pa45bUmpu2QR6Jc?cluster=devnet",
+      "slot": 497297432,
+      "blockTime": 1789234236,
+      "timestamp": "2026-09-12T17:30:36.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 11960,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "E7Exro5HUy1FKqChnnDAwBQUAA7y1RMzRH7B6AT7jpXo",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "joinPot",
+            "data": {
+              "side": {
+                "no": {}
+              }
+            }
+          }
+        },
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "AAkamzFvdrP5PmXgvZa54wUYcdBkw7yz5Gx4TUxNyjzM",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "joinPot",
+            "data": {
+              "side": {
+                "no": {}
+              }
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "242608680",
+          "postLamports": "222603680",
+          "deltaLamports": "-20005000"
+        },
+        {
+          "address": "AAkamzFvdrP5PmXgvZa54wUYcdBkw7yz5Gx4TUxNyjzM",
+          "signer": false,
+          "writable": true,
+          "preLamports": "3693160",
+          "postLamports": "13693160",
+          "deltaLamports": "10000000"
+        },
+        {
+          "address": "E7Exro5HUy1FKqChnnDAwBQUAA7y1RMzRH7B6AT7jpXo",
+          "signer": false,
+          "writable": true,
+          "preLamports": "3693160",
+          "postLamports": "13693160",
+          "deltaLamports": "10000000"
+        }
+      ]
+    },
+    {
+      "signature": "55K8n76Xxa5TQYnrxENfq65B4y4tWDm49ScGbFgKefyy4ts2BWtnam3boZrdTsWgnvKY8Ws1TZRnfwve6MqNkN7t",
+      "explorerUrl": "https://explorer.solana.com/tx/55K8n76Xxa5TQYnrxENfq65B4y4tWDm49ScGbFgKefyy4ts2BWtnam3boZrdTsWgnvKY8Ws1TZRnfwve6MqNkN7t?cluster=devnet",
+      "slot": 497297505,
+      "blockTime": 1789234247,
+      "timestamp": "2026-09-12T17:30:47.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 12292,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+            "G3X6wMLnVmHuEmaz734PzQJHFw3nUTwGgR9vHPkwgqke",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "createPot",
+            "data": {
+              "identifier": "1789234247891",
+              "task": "Devnet unopposed: deliver the notes",
+              "stake": "10000000",
+              "deadline": "1789234367",
+              "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+          "signer": true,
+          "writable": true,
+          "preLamports": "250000000",
+          "postLamports": "246301840",
+          "deltaLamports": "-3698160"
+        },
+        {
+          "address": "G3X6wMLnVmHuEmaz734PzQJHFw3nUTwGgR9vHPkwgqke",
+          "signer": false,
+          "writable": true,
+          "preLamports": "0",
+          "postLamports": "3693160",
+          "deltaLamports": "3693160"
+        }
+      ]
+    },
+    {
+      "signature": "2i9R8SecGMiCBGGmQcDAn1rJRJnwyR4f86nBsPwenDxK8gZpCgduaQcGnWcnS1Zt1UxwUW9UpdDRRvv48LeKAJtg",
+      "explorerUrl": "https://explorer.solana.com/tx/2i9R8SecGMiCBGGmQcDAn1rJRJnwyR4f86nBsPwenDxK8gZpCgduaQcGnWcnS1Zt1UxwUW9UpdDRRvv48LeKAJtg?cluster=devnet",
+      "slot": 497297593,
+      "blockTime": 1789234262,
+      "timestamp": "2026-09-12T17:31:02.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 12384,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "27Abqy7UMBmNhjYzEUfwJ7P5qNofZk1cXijjMyj9M2ZX",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "createPot",
+            "data": {
+              "identifier": "1789234262465",
+              "task": "Devnet timeout: judge misses the grace window",
+              "stake": "10000000",
+              "deadline": "1789234380",
+              "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "222603680",
+          "postLamports": "218905520",
+          "deltaLamports": "-3698160"
+        },
+        {
+          "address": "27Abqy7UMBmNhjYzEUfwJ7P5qNofZk1cXijjMyj9M2ZX",
+          "signer": false,
+          "writable": true,
+          "preLamports": "0",
+          "postLamports": "3693160",
+          "deltaLamports": "3693160"
+        }
+      ]
+    },
+    {
+      "signature": "3N9BX9ufLR7e3CgG745219Evn3q1a44ng2c8aKwXJDtqUkTqV7mvjaUKiqwzXXXTQiQxC8GSC7XboQaKE7Vohse5",
+      "explorerUrl": "https://explorer.solana.com/tx/3N9BX9ufLR7e3CgG745219Evn3q1a44ng2c8aKwXJDtqUkTqV7mvjaUKiqwzXXXTQiQxC8GSC7XboQaKE7Vohse5?cluster=devnet",
+      "slot": 497297636,
+      "blockTime": 1789234269,
+      "timestamp": "2026-09-12T17:31:09.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 5935,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+            "G3X6wMLnVmHuEmaz734PzQJHFw3nUTwGgR9vHPkwgqke",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "joinPot",
+            "data": {
+              "side": {
+                "yes": {}
+              }
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+          "signer": true,
+          "writable": true,
+          "preLamports": "246301840",
+          "postLamports": "236296840",
+          "deltaLamports": "-10005000"
+        },
+        {
+          "address": "G3X6wMLnVmHuEmaz734PzQJHFw3nUTwGgR9vHPkwgqke",
+          "signer": false,
+          "writable": true,
+          "preLamports": "3693160",
+          "postLamports": "13693160",
+          "deltaLamports": "10000000"
+        }
+      ]
+    },
+    {
+      "signature": "23EJB1XfZPnK7g2fk1WyDQegga8xXP89A5vLTr5yQCSnokBmSF5okhzabYUnjb5jATrB8aHufLhZoCyDi4xY1Jzn",
+      "explorerUrl": "https://explorer.solana.com/tx/23EJB1XfZPnK7g2fk1WyDQegga8xXP89A5vLTr5yQCSnokBmSF5okhzabYUnjb5jATrB8aHufLhZoCyDi4xY1Jzn?cluster=devnet",
+      "slot": 497297711,
+      "blockTime": 1789234281,
+      "timestamp": "2026-09-12T17:31:21.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 6248,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd",
+            "AAkamzFvdrP5PmXgvZa54wUYcdBkw7yz5Gx4TUxNyjzM",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "joinPot",
+            "data": {
+              "side": {
+                "yes": {}
+              }
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd",
+          "signer": true,
+          "writable": true,
+          "preLamports": "250000000",
+          "postLamports": "239995000",
+          "deltaLamports": "-10005000"
+        },
+        {
+          "address": "AAkamzFvdrP5PmXgvZa54wUYcdBkw7yz5Gx4TUxNyjzM",
+          "signer": false,
+          "writable": true,
+          "preLamports": "13693160",
+          "postLamports": "23693160",
+          "deltaLamports": "10000000"
+        }
+      ]
+    },
+    {
+      "signature": "3QqkUsuw528guoHBLAnB4FKSATN7fqG1yC5fuqFZ7NiopVZmAfacDC7VLZYrwmLW4ZooDHZ5J2BRUexbBKwKvrx4",
+      "explorerUrl": "https://explorer.solana.com/tx/3QqkUsuw528guoHBLAnB4FKSATN7fqG1yC5fuqFZ7NiopVZmAfacDC7VLZYrwmLW4ZooDHZ5J2BRUexbBKwKvrx4?cluster=devnet",
+      "slot": 497297720,
+      "blockTime": 1789234283,
+      "timestamp": "2026-09-12T17:31:23.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 6027,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "27Abqy7UMBmNhjYzEUfwJ7P5qNofZk1cXijjMyj9M2ZX",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "joinPot",
+            "data": {
+              "side": {
+                "yes": {}
+              }
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "218905520",
+          "postLamports": "208900520",
+          "deltaLamports": "-10005000"
+        },
+        {
+          "address": "27Abqy7UMBmNhjYzEUfwJ7P5qNofZk1cXijjMyj9M2ZX",
+          "signer": false,
+          "writable": true,
+          "preLamports": "3693160",
+          "postLamports": "13693160",
+          "deltaLamports": "10000000"
+        }
+      ]
+    },
+    {
+      "signature": "3gCjHTF84mK7NPwGo8JiBdtWsogSVEqjrahfVX8YL24VEGm5NsDnfxeHVwJ31dQ5nu4HGBq3E5ivP4JHnbdhVp1C",
+      "explorerUrl": "https://explorer.solana.com/tx/3gCjHTF84mK7NPwGo8JiBdtWsogSVEqjrahfVX8YL24VEGm5NsDnfxeHVwJ31dQ5nu4HGBq3E5ivP4JHnbdhVp1C?cluster=devnet",
+      "slot": 497297806,
+      "blockTime": 1789234297,
+      "timestamp": "2026-09-12T17:31:37.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 6348,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+            "27Abqy7UMBmNhjYzEUfwJ7P5qNofZk1cXijjMyj9M2ZX",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "joinPot",
+            "data": {
+              "side": {
+                "no": {}
+              }
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+          "signer": true,
+          "writable": true,
+          "preLamports": "236296840",
+          "postLamports": "226291840",
+          "deltaLamports": "-10005000"
+        },
+        {
+          "address": "27Abqy7UMBmNhjYzEUfwJ7P5qNofZk1cXijjMyj9M2ZX",
+          "signer": false,
+          "writable": true,
+          "preLamports": "13693160",
+          "postLamports": "23693160",
+          "deltaLamports": "10000000"
+        }
+      ]
+    },
+    {
+      "signature": "krgMS1xNE7buALv13uFEhsFuwXnmVGTibrn4pnqum6GB1f5dKV1haXD6ihNtESKG5ncLrfRhWwSHSUUaj57wsHP",
+      "explorerUrl": "https://explorer.solana.com/tx/krgMS1xNE7buALv13uFEhsFuwXnmVGTibrn4pnqum6GB1f5dKV1haXD6ihNtESKG5ncLrfRhWwSHSUUaj57wsHP?cluster=devnet",
+      "slot": 497297881,
+      "blockTime": 1789234310,
+      "timestamp": "2026-09-12T17:31:50.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 6346,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+            "E7Exro5HUy1FKqChnnDAwBQUAA7y1RMzRH7B6AT7jpXo",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "joinPot",
+            "data": {
+              "side": {
+                "yes": {}
+              }
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+          "signer": true,
+          "writable": true,
+          "preLamports": "226291840",
+          "postLamports": "216286840",
+          "deltaLamports": "-10005000"
+        },
+        {
+          "address": "E7Exro5HUy1FKqChnnDAwBQUAA7y1RMzRH7B6AT7jpXo",
+          "signer": false,
+          "writable": true,
+          "preLamports": "13693160",
+          "postLamports": "23693160",
+          "deltaLamports": "10000000"
+        }
+      ]
+    },
+    {
+      "signature": "tyAjAS1vsgrR8EBKCZX8GAxnHmnYqRQLp8yqT7SYiQbVK3RKE1YTHnij3nLjiQBtG3PPjJWCVGYS6oDNH9XGMLq",
+      "explorerUrl": "https://explorer.solana.com/tx/tyAjAS1vsgrR8EBKCZX8GAxnHmnYqRQLp8yqT7SYiQbVK3RKE1YTHnij3nLjiQBtG3PPjJWCVGYS6oDNH9XGMLq?cluster=devnet",
+      "slot": 497297908,
+      "blockTime": 1789234314,
+      "timestamp": "2026-09-12T17:31:54.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 12356,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "67AmRtgaWuMj87ugagxoBUZHzTr1Kub8VtHgTYmGiX4U",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "createPot",
+            "data": {
+              "identifier": "1789234314096",
+              "task": "Devnet core: complete the two-wallet payout",
+              "stake": "10000000",
+              "deadline": "1789234432",
+              "judge": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "208900520",
+          "postLamports": "205202360",
+          "deltaLamports": "-3698160"
+        },
+        {
+          "address": "67AmRtgaWuMj87ugagxoBUZHzTr1Kub8VtHgTYmGiX4U",
+          "signer": false,
+          "writable": true,
+          "preLamports": "0",
+          "postLamports": "3693160",
+          "deltaLamports": "3693160"
+        }
+      ]
+    },
+    {
+      "signature": "6182273B19PRWdTFV9EPDvPE21vSmwxob9219HG3rBZbp9YPoFkW2tJnVigRMyf6foeHLf5His63DmenZn4NpFQL",
+      "explorerUrl": "https://explorer.solana.com/tx/6182273B19PRWdTFV9EPDvPE21vSmwxob9219HG3rBZbp9YPoFkW2tJnVigRMyf6foeHLf5His63DmenZn4NpFQL?cluster=devnet",
+      "slot": 497298192,
+      "blockTime": 1789234361,
+      "timestamp": "2026-09-12T17:32:41.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 6320,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+            "67AmRtgaWuMj87ugagxoBUZHzTr1Kub8VtHgTYmGiX4U",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "joinPot",
+            "data": {
+              "side": {
+                "no": {}
+              }
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+          "signer": true,
+          "writable": true,
+          "preLamports": "216286840",
+          "postLamports": "206281840",
+          "deltaLamports": "-10005000"
+        },
+        {
+          "address": "67AmRtgaWuMj87ugagxoBUZHzTr1Kub8VtHgTYmGiX4U",
+          "signer": false,
+          "writable": true,
+          "preLamports": "13693160",
+          "postLamports": "23693160",
+          "deltaLamports": "10000000"
+        }
+      ]
+    },
+    {
+      "signature": "62mup7mqHqcbWoFqyvq5gmemFkbQCqcP9HZC76oMVFSeY6kYL3rzZpJkGWuoLCSVL9eQDgopMaE3PABfnVrTJfdS",
+      "explorerUrl": "https://explorer.solana.com/tx/62mup7mqHqcbWoFqyvq5gmemFkbQCqcP9HZC76oMVFSeY6kYL3rzZpJkGWuoLCSVL9eQDgopMaE3PABfnVrTJfdS?cluster=devnet",
+      "slot": 497298192,
+      "blockTime": 1789234361,
+      "timestamp": "2026-09-12T17:32:41.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 5999,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "67AmRtgaWuMj87ugagxoBUZHzTr1Kub8VtHgTYmGiX4U",
+            "11111111111111111111111111111111"
+          ],
+          "decoded": {
+            "name": "joinPot",
+            "data": {
+              "side": {
+                "yes": {}
+              }
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "205202360",
+          "postLamports": "195197360",
+          "deltaLamports": "-10005000"
+        },
+        {
+          "address": "67AmRtgaWuMj87ugagxoBUZHzTr1Kub8VtHgTYmGiX4U",
+          "signer": false,
+          "writable": true,
+          "preLamports": "3693160",
+          "postLamports": "13693160",
+          "deltaLamports": "10000000"
+        }
+      ]
+    },
+    {
+      "signature": "4yKKqfnjaYwJ43YfFz6xbC1xJ2n6YjePLBGPgcQMnKkFLmbNTD3BQYL7sjiVZUPwTU9zJvebK3uJMKCKFHRmqVHy",
+      "explorerUrl": "https://explorer.solana.com/tx/4yKKqfnjaYwJ43YfFz6xbC1xJ2n6YjePLBGPgcQMnKkFLmbNTD3BQYL7sjiVZUPwTU9zJvebK3uJMKCKFHRmqVHy?cluster=devnet",
+      "slot": 497298683,
+      "blockTime": 1789234441,
+      "timestamp": "2026-09-12T17:34:01.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 6493,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "G3X6wMLnVmHuEmaz734PzQJHFw3nUTwGgR9vHPkwgqke",
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"
+          ],
+          "decoded": {
+            "name": "settlePot",
+            "data": {
+              "completed": false
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "195197360",
+          "postLamports": "205192360",
+          "deltaLamports": "9995000"
+        },
+        {
+          "address": "G3X6wMLnVmHuEmaz734PzQJHFw3nUTwGgR9vHPkwgqke",
+          "signer": false,
+          "writable": true,
+          "preLamports": "13693160",
+          "postLamports": "3693160",
+          "deltaLamports": "-10000000"
+        }
+      ]
+    },
+    {
+      "signature": "5azA9grzGWsX3sQUc1Ja1Jp2zk99JxocLBEqFZuHkSGYZtj6r8qVBp24oZ9Ndvh8aFuHHH5eZzHpJArRBMdf6jx1",
+      "explorerUrl": "https://explorer.solana.com/tx/5azA9grzGWsX3sQUc1Ja1Jp2zk99JxocLBEqFZuHkSGYZtj6r8qVBp24oZ9Ndvh8aFuHHH5eZzHpJArRBMdf6jx1?cluster=devnet",
+      "slot": 497298932,
+      "blockTime": 1789234481,
+      "timestamp": "2026-09-12T17:34:41.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 7065,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "67AmRtgaWuMj87ugagxoBUZHzTr1Kub8VtHgTYmGiX4U",
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"
+          ],
+          "decoded": {
+            "name": "settlePot",
+            "data": {
+              "completed": true
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "205192360",
+          "postLamports": "225187360",
+          "deltaLamports": "19995000"
+        },
+        {
+          "address": "67AmRtgaWuMj87ugagxoBUZHzTr1Kub8VtHgTYmGiX4U",
+          "signer": false,
+          "writable": true,
+          "preLamports": "23693160",
+          "postLamports": "3693160",
+          "deltaLamports": "-20000000"
+        }
+      ]
+    },
+    {
+      "signature": "jWpm1q9AGm17sNtvtV3W6R43Z9f4yZUhmryCEAiADoEDvQ9f8RsNGWUSeenyc6VN8UvwQHwUb58npyYqbF4WasW",
+      "explorerUrl": "https://explorer.solana.com/tx/jWpm1q9AGm17sNtvtV3W6R43Z9f4yZUhmryCEAiADoEDvQ9f8RsNGWUSeenyc6VN8UvwQHwUb58npyYqbF4WasW?cluster=devnet",
+      "slot": 497299440,
+      "blockTime": 1789234566,
+      "timestamp": "2026-09-12T17:36:06.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 7256,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "E7Exro5HUy1FKqChnnDAwBQUAA7y1RMzRH7B6AT7jpXo",
+            "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n"
+          ],
+          "decoded": {
+            "name": "settlePot",
+            "data": {
+              "completed": true
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "225187360",
+          "postLamports": "225182360",
+          "deltaLamports": "-5000"
+        },
+        {
+          "address": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+          "signer": false,
+          "writable": true,
+          "preLamports": "206281840",
+          "postLamports": "226281840",
+          "deltaLamports": "20000000"
+        },
+        {
+          "address": "E7Exro5HUy1FKqChnnDAwBQUAA7y1RMzRH7B6AT7jpXo",
+          "signer": false,
+          "writable": true,
+          "preLamports": "23693160",
+          "postLamports": "3693160",
+          "deltaLamports": "-20000000"
+        }
+      ]
+    },
+    {
+      "signature": "5oePrx76RwdG3P2B5Zc6bPrQoiv8LvzqwuB8pfc1TRNxH368WpmTY66poZUkZ7kmroYq4cEAL2EodhArEaiGtAVW",
+      "explorerUrl": "https://explorer.solana.com/tx/5oePrx76RwdG3P2B5Zc6bPrQoiv8LvzqwuB8pfc1TRNxH368WpmTY66poZUkZ7kmroYq4cEAL2EodhArEaiGtAVW?cluster=devnet",
+      "slot": 497299673,
+      "blockTime": 1789234604,
+      "timestamp": "2026-09-12T17:36:44.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 6998,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "AAkamzFvdrP5PmXgvZa54wUYcdBkw7yz5Gx4TUxNyjzM",
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM"
+          ],
+          "decoded": {
+            "name": "settlePot",
+            "data": {
+              "completed": false
+            }
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": true,
+          "writable": true,
+          "preLamports": "225182360",
+          "postLamports": "245177360",
+          "deltaLamports": "19995000"
+        },
+        {
+          "address": "AAkamzFvdrP5PmXgvZa54wUYcdBkw7yz5Gx4TUxNyjzM",
+          "signer": false,
+          "writable": true,
+          "preLamports": "23693160",
+          "postLamports": "3693160",
+          "deltaLamports": "-20000000"
+        }
+      ]
+    },
+    {
+      "signature": "4kFUVTnUXcWm3f541aLPYivpAdcgFBwH5sXsAh8EqxwUfd8WmYAHAa6GvJ4Q1DnM9dzM4wWW7ESgYQF81KnWZQZU",
+      "explorerUrl": "https://explorer.solana.com/tx/4kFUVTnUXcWm3f541aLPYivpAdcgFBwH5sXsAh8EqxwUfd8WmYAHAa6GvJ4Q1DnM9dzM4wWW7ESgYQF81KnWZQZU?cluster=devnet",
+      "slot": 497300272,
+      "blockTime": 1789234702,
+      "timestamp": "2026-09-12T17:38:22.000Z",
+      "version": "legacy",
+      "error": null,
+      "feeLamports": "5000",
+      "computeUnitsConsumed": 6722,
+      "instructions": [
+        {
+          "programAddress": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+          "accounts": [
+            "D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd",
+            "27Abqy7UMBmNhjYzEUfwJ7P5qNofZk1cXijjMyj9M2ZX",
+            "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+            "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n"
+          ],
+          "decoded": {
+            "name": "refundPot",
+            "data": {}
+          }
+        }
+      ],
+      "balances": [
+        {
+          "address": "D25i91zKsJsyAnyju9cuLFXWd2tjEcTYo51pjYagtJqd",
+          "signer": true,
+          "writable": true,
+          "preLamports": "239995000",
+          "postLamports": "239990000",
+          "deltaLamports": "-5000"
+        },
+        {
+          "address": "27Abqy7UMBmNhjYzEUfwJ7P5qNofZk1cXijjMyj9M2ZX",
+          "signer": false,
+          "writable": true,
+          "preLamports": "23693160",
+          "postLamports": "3693160",
+          "deltaLamports": "-20000000"
+        },
+        {
+          "address": "9zofTFbHkjyZy5PVN5JEVpbVceBU8jHs59sZT12mEB1n",
+          "signer": false,
+          "writable": true,
+          "preLamports": "226281840",
+          "postLamports": "236281840",
+          "deltaLamports": "10000000"
+        },
+        {
+          "address": "AZLEpCpPXd4NH2j9cZ9ZWsdzku87QeVTiWBae5Vru8oM",
+          "signer": false,
+          "writable": true,
+          "preLamports": "245177360",
+          "postLamports": "255177360",
+          "deltaLamports": "10000000"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "genesisHash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "startSlot": 497300517,
+  "endSlot": 497300672,
+  "finishedAt": "2026-09-12T17:39:27.527Z",
+  "verification": {
+    "bytecodeMatchesLocalElf": true,
+    "publishedRecoveryIdl": true,
+    "allRequestedPotsRead": true,
+    "allPotsSettled": true,
+    "allHistoryTransactionsRead": true
+  },
+  "repairedAt": "2026-09-12T17:41:32.699Z"
+}
