@@ -14,6 +14,7 @@ export type Config = {
   solanaRpcUrl: string;
   appUrl: string;
   pollIntervalMs: number;
+  dryRun: boolean;
 };
 
 /**
@@ -51,7 +52,16 @@ function httpUrl(name: string, value: string | undefined, fallback: string) {
   return candidate;
 }
 
-export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
+function isEnabled(value: string | undefined) {
+  return ["1", "true", "yes", "on"].includes(
+    (value ?? "").trim().toLowerCase(),
+  );
+}
+
+export function readConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  argv: readonly string[] = process.argv.slice(2),
+): Config {
   const interval = optional(env.POLL_INTERVAL_MS);
   const pollIntervalMs =
     interval === undefined ? DEFAULT_POLL_INTERVAL_MS : Number(interval);
@@ -75,6 +85,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
     ),
     appUrl: httpUrl("APP_URL", env.APP_URL, DEFAULT_APP_URL),
     pollIntervalMs,
+    dryRun: isEnabled(env.DRY_RUN) || argv.includes("--dry-run"),
   };
 }
 

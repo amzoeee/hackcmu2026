@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "tsx src/index.ts",
+    "dry-run": "tsx src/index.ts --dry-run",
     "register": "tsx src/register.ts",
     "test": "node --import tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
