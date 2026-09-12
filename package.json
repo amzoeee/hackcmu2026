@@ -18,17 +18,20 @@
     "tools:check": "bash scripts/with-tools.sh bash scripts/check-tools.sh",
     "anchor": "bash scripts/with-tools.sh anchor",
     "anchor:build": "bash scripts/with-tools.sh bash scripts/build-program.sh",
-    "anchor:test": "npm run anchor:build && npm run anchor -- test --skip-build",
+    "anchor:test": "npm run anchor:build && npm run anchor -- test --skip-build --provider.cluster localnet",
     "anchor:deploy:devnet": "npm run anchor -- deploy --provider.cluster devnet",
     "test": "npm run anchor:test",
     "test:anchor": "node --import tsx --test --test-timeout=100000 tests/*.test.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.32.1",
+    "@privy-io/react-auth": "^3.42.0",
+    "@solana/kit": "^8.3.0",
     "@solana/wallet-adapter-base": "0.9.28",
     "@solana/wallet-adapter-react": "0.15.40",
     "@solana/wallet-adapter-react-ui": "0.9.40",
     "@solana/web3.js": "1.99.0",
+    "@stripe/stripe-js": "^9.16.0",
     "next": "16.3.5",
     "react": "19.3.0",
     "react-dom": "19.3.0"

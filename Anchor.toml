@@ -8,16 +8,16 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-accountability = "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb"
+accountability = "4wJH64VGkp4kLPMFGU9p9q2cLKjThDsUaYY2WAJS7jJ9"
 
 [programs.localnet]
-accountability = "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb"
+accountability = "4wJH64VGkp4kLPMFGU9p9q2cLKjThDsUaYY2WAJS7jJ9"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = ".wallets/deployer.json"
 
 [scripts]
