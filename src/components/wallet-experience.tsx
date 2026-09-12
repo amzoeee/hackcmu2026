@@ -45,9 +45,7 @@ async function requestDemoFunds(address: string) {
     return result.message || "The demo wallet is funded.";
   } catch (error) {
     if (abortSignal.aborted) {
-      throw new Error(
-        "Funding is taking too long. Check your balance before requesting more test SOL in a minute.",
-      );
+      throw new Error("Funding timed out. Check your balance before retrying.");
     }
     throw error;
   }
@@ -161,7 +159,7 @@ export function DemoWalletExperience() {
       }
       secondaryConnect={
         SOLANA_NETWORK === "devnet"
-          ? { label: "Use wallet extension", onClick: connectExternalWallet }
+          ? { label: "Connect wallet", onClick: connectExternalWallet }
           : undefined
       }
     />

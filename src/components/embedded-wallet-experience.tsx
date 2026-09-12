@@ -30,9 +30,8 @@ export function PrivyWalletProvider({
       config={{
         appearance: {
           theme: "light",
-          accentColor: "#135edb",
-          landingHeader: "Continue to Finance your Responsibilities",
-          loginMessage: "Your wallet is created automatically.",
+          accentColor: "#0a0a0a",
+          landingHeader: "Finance your Responsibilities",
           showWalletLoginFirst: false,
           walletChainType: "solana-only",
         },
@@ -121,7 +120,7 @@ export function PrivyWalletExperience({
       connection={connection}
       wallet={anchorWallet}
       address={address}
-      connectLabel="Continue with email or Google"
+      connectLabel="Sign in"
       walletLabel={
         embeddedWallet
           ? "embedded Finance your Responsibilities wallet"
