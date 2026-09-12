@@ -1,0 +1,30 @@
+name: Prototype checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prototype-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: npm ci
+      - name: Lint, typecheck, and build
+        run: npm run check
+      - name: Test demo funding
+        run: node --import tsx --test --test-timeout=30000 tests/demo-funds.test.ts
