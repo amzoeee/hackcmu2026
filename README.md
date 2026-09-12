@@ -1,16 +1,17 @@
 # Accountability staking app
 
-A starter app for staking test SOL on whether someone completes a task.
+A devnet app for staking test SOL on whether someone completes a task.
 
-**What works now:** the page, wallet selection, SOL balance display, and a basic Anchor program with a passing local test.
+**What works now:** create a pot, join YES or NO, and have the named judge settle it after the deadline. Payouts, refunds when the winning side is empty, and rent preservation are enforced on-chain and covered by local-validator tests.
 
-**What still needs building:** creating pots, joining YES/NO, and settling payouts. The form is disabled for now. Nothing has been deployed to devnet.
+The app supports passwordless email/Google onboarding through an optional Privy embedded wallet. Users who already have a Solana wallet can still connect it directly.
 
 ## 1. Install these first
 
 - **Node.js 24 LTS**, which includes **npm**. Download it from [nodejs.org](https://nodejs.org/). Node 22 or newer is supported; this scaffold was tested with Node 26.
 - **On a Mac: Xcode Command Line Tools.** Open Terminal and run `xcode-select --install`. If it says they are already installed, you are ready.
-- **For connecting a wallet in the browser:** install the [Phantom](https://phantom.com/) or [Solflare](https://solflare.com/) browser extension. Switch the wallet to **Solana devnet**. You do not need a wallet extension to run the automated tests.
+- **For embedded wallet onboarding:** create a Privy app and enable email and Google login. Add its public app ID to `.env.local` as `NEXT_PUBLIC_PRIVY_APP_ID`. A wallet is then created automatically after login.
+- **For the fallback wallet connection:** install [Phantom](https://phantom.com/) or [Solflare](https://solflare.com/) and switch it to **Solana devnet**.
 
 You do **not** need to install Rust, Solana, or Anchor manually. The setup command below installs them for this project.
 
@@ -52,7 +53,9 @@ npm run dev
 
 Open **[http://localhost:3000](http://localhost:3000)** in your browser. Leave the terminal running. Press **Ctrl+C** in that terminal to stop the server.
 
-Click **Select Wallet** to connect your devnet wallet. The page shows its test SOL balance. Pot actions are not implemented yet.
+With `NEXT_PUBLIC_PRIVY_APP_ID` configured, click **Continue with email or Google**. The signed-in user receives an embedded Solana wallet; no extension or seed phrase is required. Without that variable, the app presents the browser-wallet fallback.
+
+The embedded wallet still needs devnet SOL to create accounts or stake. Fund it from a faucet during development. Sponsoring transaction fees or distributing welcome test SOL from a protected server wallet is a separate production concern; never put that private key in the browser.
 
 No environment file is required. The app uses the public devnet RPC by default. If you later need a different devnet RPC, copy `.env.example` to `.env.local`, change `NEXT_PUBLIC_SOLANA_RPC_URL`, and restart the server. Never put a private key in that file.
 
@@ -68,7 +71,7 @@ npm run check
 npm test
 ```
 
-**`npm test` starts and stops its own local validator.** You do not need to start one yourself, fund a wallet, or connect a browser wallet. The current test sends a signed `initialize` transaction and checks that it succeeds. It does not test staking yet.
+**`npm test` starts and stops its own local validator.** It tests pot creation, duplicate and late joins, unauthorized and early settlement, recipient validation, winning payouts, one-sided refunds, repeated settlement, and empty pots.
 
 Other useful commands:
 
@@ -87,11 +90,12 @@ The frontend uses **devnet**. Automated program tests use **localnet**, a tempor
 
 | What you want to change                           | File                                 |
 | ------------------------------------------------- | ------------------------------------ |
-| Main page, create-pot form, and pot list          | `src/app/page.tsx`                   |
+| Main page selection                                | `src/app/page.tsx`                   |
+| Create-pot form, pot list, and transaction UI     | `src/components/solara-app.tsx`      |
+| Embedded and browser wallet paths                 | `src/components/wallet-experience.tsx` |
 | Colors, spacing, and layout styles                | `src/app/globals.css`                |
 | App-wide layout and page title                    | `src/app/layout.tsx`                 |
 | Wallet connection setup                           | `src/components/wallet-provider.tsx` |
-| SOL balance display and refresh                   | `src/components/wallet-status.tsx`   |
 | Anchor client used to call the program            | `src/lib/anchor/client.ts`           |
 | Default Solana RPC endpoint                       | `src/lib/solana.ts`                  |
 | On-chain logic: add create, join, and settle here | `programs/accountability/src/lib.rs` |
@@ -105,13 +109,12 @@ The frontend uses **devnet**. Automated program tests use **localnet**, a tempor
 
 **Do not commit `.wallets/`, `.tools/`, or `target/`.** They are already ignored. `.wallets/deployer.json` is the local development wallet; `target/deploy/accountability-keypair.json` determines the program address. Keep that program keypair if you want to keep the same address. A fresh setup generates a new one and synchronizes the configuration.
 
-## What to build next
+## Devnet deployment
 
-1. Add the pot account and create/join/settle instructions in the Rust program.
-2. Add tests for those instructions, including payouts and refunds. See `AGENTS.md` for the required cases.
-3. Connect the page to the program.
-4. Fund the deployer with test SOL and deploy to devnet using `npm run anchor:deploy:devnet`.
-5. Test the full flow with two funded devnet browser wallets.
+1. Run `npm run anchor:deploy:devnet` with `.wallets/deployer.json` funded on devnet.
+2. Put the same deployed program address in `Anchor.toml` and regenerate the IDL with `npm run anchor:build` if it changes.
+3. Add `NEXT_PUBLIC_PRIVY_APP_ID` to `.env.local`, or use two funded browser wallets.
+4. Create a short-deadline pot, have two wallets take opposite sides, and settle from the judge wallet after the deadline.
 
 ## Known setup notes
 
