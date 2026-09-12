@@ -27,6 +27,8 @@ import {
 
 const STAKE = 100_000_000; // 0.1 SOL
 const GRACE_SECONDS = 300;
+// Mirrors Pot::SPACE in the program: ten wallets, a 160-byte task and a 200-byte proof link.
+const POT_SIZE = 803;
 
 describe("accountability pots", () => {
   const provider = AnchorProvider.env();
@@ -180,6 +182,14 @@ describe("accountability pots", () => {
     const before = await snapshot(pot, wallets);
     await rejectsProgramError(action(), code);
     assert.deepEqual(await snapshot(pot, wallets), before);
+  }
+
+  async function submitProof(pot: PublicKey, submitter: Keypair, uri: string) {
+    await program.methods
+      .submitProof(uri)
+      .accounts({ submitter: submitter.publicKey, pot })
+      .signers([submitter])
+      .rpc();
   }
 
   async function waitForDeadline(deadline: number) {
@@ -373,16 +383,17 @@ describe("accountability pots", () => {
       });
       const rentReserve = await provider.connection.getBalance(pot);
       const accountInfo = await provider.connection.getAccountInfo(pot);
-      assert.equal(accountInfo?.data.length, 599);
+      assert.equal(accountInfo?.data.length, POT_SIZE);
       assert.equal(
         rentReserve,
-        await provider.connection.getMinimumBalanceForRentExemption(599),
+        await provider.connection.getMinimumBalanceForRentExemption(POT_SIZE),
       );
 
       for (const participant of participants.slice(0, 10)) {
         await join(pot, participant, side);
       }
       await rejectsProgramError(join(pot, participants[10], "yes"), "PotFull");
+      await submitProof(pot, judge, "p".repeat(200));
       const account = await program.account.pot.fetch(pot);
       assert.equal(
         account.yesParticipants.length + account.noParticipants.length,
@@ -399,9 +410,10 @@ describe("accountability pots", () => {
       const settled = await program.account.pot.fetch(pot);
       assert.equal(settled.settled, true);
       assert.equal(settled.outcome, true);
+      assert.equal(settled.proofUri, "p".repeat(200));
       assert.equal(
         (await program.coder.accounts.encode("pot", settled)).length,
-        599,
+        POT_SIZE,
       );
       for (const [index, wallet] of recipients.entries()) {
         assert.equal(
@@ -449,6 +461,7 @@ describe("accountability pots", () => {
     for (const participant of yesParticipants)
       await join(pot, participant, "yes");
     for (const winner of noWinners) await join(pot, winner, "no");
+    await submitProof(pot, yesParticipants[0], "p".repeat(200));
 
     const winnerBalances = await Promise.all(
       noWinners.map((wallet) =>
@@ -485,9 +498,10 @@ describe("accountability pots", () => {
     assert.equal(settled.yesParticipants.length, 7);
     assert.equal(settled.noParticipants.length, 3);
     assert.equal(settled.outcome, false);
+    assert.equal(settled.proofUri, "p".repeat(200));
     assert.equal(
       (await program.coder.accounts.encode("pot", settled)).length,
-      599,
+      POT_SIZE,
     );
     assert.equal(
       await provider.connection.getBalance(pot),
@@ -798,6 +812,55 @@ describe("accountability pots", () => {
     );
   });
 
+  it("accepts proof links from the creator or a YES participant until settlement", async () => {
+    const creator = Keypair.generate();
+    const yes = Keypair.generate();
+    const no = Keypair.generate();
+    const outsider = Keypair.generate();
+    await Promise.all([
+      fund(creator, 3 * LAMPORTS_PER_SOL),
+      fund(yes),
+      fund(no),
+      fund(outsider),
+    ]);
+    const { pot, deadline } = await createPot(creator, creator.publicKey, 8);
+    assert.equal((await program.account.pot.fetch(pot)).proofUri, "");
+    await join(pot, yes, "yes");
+    await join(pot, no, "no");
+
+    await submitProof(pot, creator, "https://example.com/proof/1");
+    assert.equal(
+      (await program.account.pot.fetch(pot)).proofUri,
+      "https://example.com/proof/1",
+    );
+    const longest = "x".repeat(200);
+    await submitProof(pot, yes, longest);
+    assert.equal((await program.account.pot.fetch(pot)).proofUri, longest);
+
+    const rejected: Array<[Keypair, string, string]> = [
+      [no, "https://example.com/no", "UnauthorizedProof"],
+      [outsider, "https://example.com/outsider", "UnauthorizedProof"],
+      [creator, "x".repeat(201), "ProofTooLong"],
+      [creator, "🙂".repeat(51), "ProofTooLong"],
+      [creator, "", "ProofRequired"],
+      [creator, " \n\t ", "ProofRequired"],
+    ];
+    for (const [submitter, uri, code] of rejected) {
+      await rejectsProgramError(submitProof(pot, submitter, uri), code);
+      assert.equal((await program.account.pot.fetch(pot)).proofUri, longest);
+    }
+
+    await waitForDeadline(deadline);
+    await settle(pot, creator, true, [yes.publicKey]);
+    await rejectsProgramError(
+      submitProof(pot, creator, "https://example.com/late"),
+      "PotSettled",
+    );
+    const settled = await program.account.pot.fetch(pot);
+    assert.equal(settled.settled, true);
+    assert.equal(settled.proofUri, longest);
+  });
+
   it("settles an empty pot without a payout and rejects late joins", async () => {
     const judge = Keypair.generate();
     const lateParticipant = Keypair.generate();
@@ -888,7 +951,7 @@ describe("accountability pots", () => {
     assert.ok(createTransaction?.meta);
     assert.equal(createTransaction.transaction.signatures.length, 1);
     const rent =
-      await provider.connection.getMinimumBalanceForRentExemption(599);
+      await provider.connection.getMinimumBalanceForRentExemption(POT_SIZE);
     assert.equal(
       await provider.connection.getBalance(organizer.publicKey),
       beforeCreate - 5 * rent - createTransaction.meta.fee,

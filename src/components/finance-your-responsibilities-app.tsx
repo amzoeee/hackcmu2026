@@ -47,6 +47,7 @@ type PotAccount = {
   noParticipants: PublicKey[];
   settled: boolean;
   outcome: boolean | null;
+  proofUri: string;
 };
 
 type Pot = PotAccount & { publicKey: PublicKey };

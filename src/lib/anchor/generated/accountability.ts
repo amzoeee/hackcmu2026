@@ -175,6 +175,38 @@ export type Accountability = {
           "type": "bool"
         }
       ]
+    },
+    {
+      "name": "submitProof",
+      "docs": [
+        "The creator or any YES participant may link evidence until the pot is settled."
+      ],
+      "discriminator": [
+        54,
+        241,
+        46,
+        84,
+        4,
+        212,
+        46,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "submitter",
+          "signer": true
+        },
+        {
+          "name": "pot",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -282,6 +314,21 @@ export type Accountability = {
       "code": 6017,
       "name": "insufficientPotBalance",
       "msg": "The pot cannot pay the recorded stakes while preserving rent."
+    },
+    {
+      "code": 6018,
+      "name": "unauthorizedProof",
+      "msg": "Only the creator or a YES participant may submit proof."
+    },
+    {
+      "code": 6019,
+      "name": "proofRequired",
+      "msg": "A proof link is required."
+    },
+    {
+      "code": 6020,
+      "name": "proofTooLong",
+      "msg": "The proof link is too long."
     }
   ],
   "types": [
@@ -339,6 +386,10 @@ export type Accountability = {
             "type": {
               "option": "bool"
             }
+          },
+          {
+            "name": "proofUri",
+            "type": "string"
           }
         ]
       }

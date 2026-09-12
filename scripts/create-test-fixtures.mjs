@@ -79,6 +79,7 @@ for (const [index, fixture] of fixtures.entries()) {
     no_participants: fixture.no,
     settled: false,
     outcome: null,
+    proof_uri: "",
   });
   assert.ok(encoded.length <= data.length);
   encoded.copy(data);

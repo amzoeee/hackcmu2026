@@ -7,6 +7,7 @@ declare_id!("EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb");
 
 const MAX_TASK_LENGTH: usize = 160;
 const MAX_PARTICIPANTS: usize = 10;
+const MAX_PROOF_LENGTH: usize = 200;
 
 #[constant]
 pub const SETTLEMENT_GRACE_SECONDS: i64 = 300;
@@ -54,6 +55,22 @@ pub mod accountability {
         pot.no_participants = Vec::new();
         pot.settled = false;
         pot.outcome = None;
+        pot.proof_uri = String::new();
+        Ok(())
+    }
+
+    /// The creator or any YES participant may link evidence until the pot is settled.
+    pub fn submit_proof(ctx: Context<SubmitProof>, uri: String) -> Result<()> {
+        let pot = &mut ctx.accounts.pot;
+        let submitter = ctx.accounts.submitter.key();
+        require!(
+            pot.creator == submitter || pot.yes_participants.contains(&submitter),
+            AccountabilityError::UnauthorizedProof
+        );
+        require!(!pot.settled, AccountabilityError::PotSettled);
+        require!(!uri.trim().is_empty(), AccountabilityError::ProofRequired);
+        require!(uri.len() <= MAX_PROOF_LENGTH, AccountabilityError::ProofTooLong);
+        pot.proof_uri = uri;
         Ok(())
     }
 
@@ -255,6 +272,13 @@ pub struct RefundPot<'info> {
     pub pot: Account<'info, Pot>,
 }
 
+#[derive(Accounts)]
+pub struct SubmitProof<'info> {
+    pub submitter: Signer<'info>,
+    #[account(mut)]
+    pub pot: Account<'info, Pot>,
+}
+
 #[account]
 pub struct Pot {
     pub creator: Pubkey,
@@ -268,12 +292,27 @@ pub struct Pot {
     pub no_participants: Vec<Pubkey>,
     pub settled: bool,
     pub outcome: Option<bool>,
+    pub proof_uri: String,
 }
 
 impl Pot {
     // Both vector length prefixes are stored, but their combined capacity is ten wallets.
-    pub const SPACE: usize =
-        8 + 32 + 32 + 8 + 4 + MAX_TASK_LENGTH + 8 + 8 + 8 + 4 + 4 + (32 * MAX_PARTICIPANTS) + 1 + 2;
+    pub const SPACE: usize = 8
+        + 32
+        + 32
+        + 8
+        + 4
+        + MAX_TASK_LENGTH
+        + 8
+        + 8
+        + 8
+        + 4
+        + 4
+        + (32 * MAX_PARTICIPANTS)
+        + 1
+        + 2
+        + 4
+        + MAX_PROOF_LENGTH;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
@@ -320,6 +359,12 @@ pub enum AccountabilityError {
     InvalidJudge,
     #[msg("The pot cannot pay the recorded stakes while preserving rent.")]
     InsufficientPotBalance,
+    #[msg("Only the creator or a YES participant may submit proof.")]
+    UnauthorizedProof,
+    #[msg("A proof link is required.")]
+    ProofRequired,
+    #[msg("The proof link is too long.")]
+    ProofTooLong,
 }
 
 #[cfg(test)]

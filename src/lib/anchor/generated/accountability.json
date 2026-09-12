@@ -169,6 +169,38 @@
           "type": "bool"
         }
       ]
+    },
+    {
+      "name": "submit_proof",
+      "docs": [
+        "The creator or any YES participant may link evidence until the pot is settled."
+      ],
+      "discriminator": [
+        54,
+        241,
+        46,
+        84,
+        4,
+        212,
+        46,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "submitter",
+          "signer": true
+        },
+        {
+          "name": "pot",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -276,6 +308,21 @@
       "code": 6017,
       "name": "InsufficientPotBalance",
       "msg": "The pot cannot pay the recorded stakes while preserving rent."
+    },
+    {
+      "code": 6018,
+      "name": "UnauthorizedProof",
+      "msg": "Only the creator or a YES participant may submit proof."
+    },
+    {
+      "code": 6019,
+      "name": "ProofRequired",
+      "msg": "A proof link is required."
+    },
+    {
+      "code": 6020,
+      "name": "ProofTooLong",
+      "msg": "The proof link is too long."
     }
   ],
   "types": [
@@ -333,6 +380,10 @@
             "type": {
               "option": "bool"
             }
+          },
+          {
+            "name": "proof_uri",
+            "type": "string"
           }
         ]
       }
