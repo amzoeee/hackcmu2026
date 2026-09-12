@@ -311,6 +311,21 @@ export type Accountability = {
       ]
     }
   ],
+  "events": [
+    {
+      "name": "ProofSubmitted",
+      "discriminator": [
+        160,
+        51,
+        85,
+        70,
+        249,
+        89,
+        5,
+        139
+      ]
+    }
+  ],
   "errors": [
     {
       "code": 6000,
@@ -436,9 +451,37 @@ export type Accountability = {
       "code": 6024,
       "name": "nameTooLong",
       "msg": "The display name is too long."
+    },
+    {
+      "code": 6025,
+      "name": "proofAlreadySubmitted",
+      "msg": "Only the creator may replace a proof link that is already recorded."
     }
   ],
   "types": [
+    {
+      "name": "ProofSubmitted",
+      "docs": [
+        "Only the newest proof link is stored; the log keeps the ones it replaced."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pot",
+            "type": "pubkey"
+          },
+          {
+            "name": "submitter",
+            "type": "pubkey"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          }
+        ]
+      }
+    },
     {
       "name": "pot",
       "type": {

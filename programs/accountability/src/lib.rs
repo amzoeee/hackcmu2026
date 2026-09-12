@@ -65,7 +65,10 @@ pub mod accountability {
         Ok(())
     }
 
-    /// The creator or any YES participant may link evidence until the pot is settled.
+    /// The creator or any YES participant may link evidence until the pot is
+    /// settled. Only the creator may replace a link that is already recorded, so
+    /// one participant cannot swap another's evidence out from under the judge.
+    /// Every accepted link is emitted, leaving the replaced ones in the log.
     pub fn submit_proof(ctx: Context<SubmitProof>, uri: String) -> Result<()> {
         let pot = &mut ctx.accounts.pot;
         let submitter = ctx.accounts.submitter.key();
@@ -74,9 +77,19 @@ pub mod accountability {
             AccountabilityError::UnauthorizedProof
         );
         require!(!pot.settled, AccountabilityError::PotSettled);
+        require!(
+            pot.proof_uri.is_empty() || pot.creator == submitter,
+            AccountabilityError::ProofAlreadySubmitted
+        );
         require!(!uri.trim().is_empty(), AccountabilityError::ProofRequired);
         require!(uri.len() <= MAX_PROOF_LENGTH, AccountabilityError::ProofTooLong);
-        pot.proof_uri = uri;
+        let pot_key = pot.key();
+        pot.proof_uri = uri.clone();
+        emit!(ProofSubmitted {
+            pot: pot_key,
+            submitter,
+            uri,
+        });
         Ok(())
     }
 
@@ -380,6 +393,14 @@ impl Profile {
     pub const SPACE: usize = 8 + 32 + 4 + MAX_NAME_LENGTH;
 }
 
+/// Only the newest proof link is stored; the log keeps the ones it replaced.
+#[event]
+pub struct ProofSubmitted {
+    pub pot: Pubkey,
+    pub submitter: Pubkey,
+    pub uri: String,
+}
+
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
     Yes,
@@ -438,6 +459,8 @@ pub enum AccountabilityError {
     NameRequired,
     #[msg("The display name is too long.")]
     NameTooLong,
+    #[msg("Only the creator may replace a proof link that is already recorded.")]
+    ProofAlreadySubmitted,
 }
 
 #[cfg(test)]

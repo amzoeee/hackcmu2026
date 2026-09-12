@@ -852,7 +852,7 @@ describe("accountability pots", () => {
     );
   });
 
-  it("accepts proof links from the creator or a YES participant until settlement", async () => {
+  it("accepts proof links and protects a recorded one until settlement", async () => {
     const creator = Keypair.generate();
     const yes = Keypair.generate();
     const no = Keypair.generate();
@@ -868,18 +868,25 @@ describe("accountability pots", () => {
     await join(pot, yes, "yes");
     await join(pot, no, "no");
 
-    await submitProof(pot, creator, "https://example.com/proof/1");
+    // A YES participant may record the first link.
+    await submitProof(pot, yes, "https://example.com/proof/1");
     assert.equal(
       (await program.account.pot.fetch(pot)).proofUri,
       "https://example.com/proof/1",
     );
+    // Nobody but the creator may replace a link that is already recorded.
+    await rejectsProgramError(
+      submitProof(pot, yes, "https://example.com/clobber"),
+      "ProofAlreadySubmitted",
+    );
     const longest = "x".repeat(200);
-    await submitProof(pot, yes, longest);
+    await submitProof(pot, creator, longest);
     assert.equal((await program.account.pot.fetch(pot)).proofUri, longest);
 
     const rejected: Array<[Keypair, string, string]> = [
       [no, "https://example.com/no", "UnauthorizedProof"],
       [outsider, "https://example.com/outsider", "UnauthorizedProof"],
+      [yes, "https://example.com/clobber", "ProofAlreadySubmitted"],
       [creator, "x".repeat(201), "ProofTooLong"],
       [creator, "🙂".repeat(51), "ProofTooLong"],
       [creator, "", "ProofRequired"],
