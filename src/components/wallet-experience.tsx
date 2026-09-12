@@ -32,30 +32,48 @@ async function requestDemoFunds(address: string) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ address }),
   });
-  const result = (await response.json()) as { error?: string; message?: string };
-  if (!response.ok) throw new Error(result.error || "Could not add devnet SOL.");
+  const result = (await response.json()) as {
+    error?: string;
+    message?: string;
+  };
+  if (!response.ok)
+    throw new Error(result.error || "Could not add devnet SOL.");
   return result.message || "The demo wallet is funded.";
 }
 
-function embeddedAnchorWallet(wallet: ConnectedStandardSolanaWallet): AnchorWallet {
-  const signTransaction = async <T extends Transaction | VersionedTransaction>(transaction: T): Promise<T> => {
-    const serialized = transaction instanceof Transaction
-      ? transaction.serialize({ requireAllSignatures: false, verifySignatures: false })
-      : transaction.serialize();
+function embeddedAnchorWallet(
+  wallet: ConnectedStandardSolanaWallet,
+): AnchorWallet {
+  const signTransaction = async <T extends Transaction | VersionedTransaction>(
+    transaction: T,
+  ): Promise<T> => {
+    const serialized =
+      transaction instanceof Transaction
+        ? transaction.serialize({
+            requireAllSignatures: false,
+            verifySignatures: false,
+          })
+        : transaction.serialize();
     const { signedTransaction } = await wallet.signTransaction({
       transaction: serialized,
       chain: "solana:devnet",
     });
-    return (transaction instanceof Transaction
-      ? Transaction.from(signedTransaction)
-      : VersionedTransaction.deserialize(signedTransaction)) as T;
+    return (
+      transaction instanceof Transaction
+        ? Transaction.from(signedTransaction)
+        : VersionedTransaction.deserialize(signedTransaction)
+    ) as T;
   };
 
   return {
     publicKey: new PublicKey(wallet.address),
     signTransaction,
-    signAllTransactions: async <T extends Transaction | VersionedTransaction>(transactions: T[]) =>
-      Promise.all(transactions.map((transaction) => signTransaction(transaction))),
+    signAllTransactions: async <T extends Transaction | VersionedTransaction>(
+      transactions: T[],
+    ) =>
+      Promise.all(
+        transactions.map((transaction) => signTransaction(transaction)),
+      ),
   };
 }
 
@@ -74,6 +92,11 @@ export function ExternalWalletExperience() {
       walletLabel={wallet.wallet?.adapter.name || "browser wallet"}
       onConnect={() => setVisible(true)}
       onDisconnect={wallet.disconnect}
+      onRequestFunds={
+        wallet.publicKey
+          ? () => requestDemoFunds(wallet.publicKey!.toBase58())
+          : undefined
+      }
     />
   );
 }
@@ -84,24 +107,36 @@ export function EmbeddedWalletExperience() {
   const { wallets } = usePrivyWallets();
   const adapterWallet = useWallet();
   const adapterAnchorWallet = useAnchorWallet();
-  const embeddedWallet = wallets.find((wallet) => wallet.standardWallet.name === "Privy");
+  const embeddedWallet = wallets.find(
+    (wallet) => wallet.standardWallet.name === "Privy",
+  );
   const anchorWallet = useMemo(
-    () => (embeddedWallet ? embeddedAnchorWallet(embeddedWallet) : adapterAnchorWallet),
+    () =>
+      embeddedWallet
+        ? embeddedAnchorWallet(embeddedWallet)
+        : adapterAnchorWallet,
     [adapterAnchorWallet, embeddedWallet],
   );
+  const address =
+    embeddedWallet?.address || adapterWallet.publicKey?.toBase58();
 
   return (
     <SolaraApp
       connection={connection}
       wallet={anchorWallet}
-      address={embeddedWallet?.address || adapterWallet.publicKey?.toBase58()}
+      address={address}
       connectLabel="Continue with email or Google"
-      walletLabel={embeddedWallet ? "embedded Solara wallet" : adapterWallet.wallet?.adapter.name || "browser wallet"}
+      walletLabel={
+        embeddedWallet
+          ? "embedded Solara wallet"
+          : adapterWallet.wallet?.adapter.name || "browser wallet"
+      }
       onConnect={() => {
         if (authenticated) connectOrCreateWallet();
         else login();
       }}
       onDisconnect={authenticated ? logout : adapterWallet.disconnect}
+      onRequestFunds={address ? () => requestDemoFunds(address) : undefined}
     />
   );
 }
@@ -158,11 +193,20 @@ export function DemoWalletExperience() {
       wallet={wallet}
       address={address}
       connectLabel="Start demo"
-      walletLabel={mode === "external" ? adapterWallet.wallet?.adapter.name || "browser wallet" : "this browser's demo wallet"}
+      walletLabel={
+        mode === "external"
+          ? adapterWallet.wallet?.adapter.name || "browser wallet"
+          : "this browser's demo wallet"
+      }
       onConnect={startDemo}
       onDisconnect={() => void disconnect()}
-      onRequestFunds={mode === "demo" && address ? () => requestDemoFunds(address) : undefined}
-      secondaryConnect={{ label: "Use wallet extension", onClick: connectExternalWallet }}
+      onRequestFunds={
+        mode === "demo" && address ? () => requestDemoFunds(address) : undefined
+      }
+      secondaryConnect={{
+        label: "Use wallet extension",
+        onClick: connectExternalWallet,
+      }}
     />
   );
 }

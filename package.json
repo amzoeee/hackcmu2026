@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start",
     "start:lan": "next start --hostname 0.0.0.0",
+    "demo:check": "bash scripts/with-tools.sh bash scripts/check-demo-readiness.sh",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run build",

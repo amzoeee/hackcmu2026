@@ -13,8 +13,8 @@ import { SOLANA_NETWORK, SOLANA_RPC_URL } from "@/lib/solana";
 
 export const runtime = "nodejs";
 
-const FUND_AMOUNT = LAMPORTS_PER_SOL;
-const SUFFICIENT_BALANCE = LAMPORTS_PER_SOL / 4;
+const FUND_AMOUNT = LAMPORTS_PER_SOL / 4;
+const SUFFICIENT_BALANCE = LAMPORTS_PER_SOL / 20;
 const cooldowns = new Map<string, number>();
 const inFlight = new Set<string>();
 
@@ -23,7 +23,9 @@ async function loadFunder() {
   if (!filename) return null;
   const secret = JSON.parse(await readFile(filename, "utf8")) as number[];
   if (!Array.isArray(secret) || secret.length !== 64) {
-    throw new Error("The demo funder keypair is not a valid Solana keypair file.");
+    throw new Error(
+      "The demo funder keypair is not a valid Solana keypair file.",
+    );
   }
   return Keypair.fromSecretKey(Uint8Array.from(secret));
 }
@@ -31,7 +33,10 @@ async function loadFunder() {
 async function sendDemoSol(connection: Connection, recipient: PublicKey) {
   const funder = await loadFunder();
   if (funder) {
-    const funderBalance = await connection.getBalance(funder.publicKey, "confirmed");
+    const funderBalance = await connection.getBalance(
+      funder.publicKey,
+      "confirmed",
+    );
     if (funderBalance < FUND_AMOUNT + 10_000) {
       throw new Error("The host's demo funder needs more devnet SOL.");
     }
@@ -82,7 +87,9 @@ export async function POST(request: Request) {
   const now = Date.now();
   if (inFlight.has(address) || (cooldowns.get(address) ?? 0) > now) {
     return NextResponse.json(
-      { error: "Funding is already in progress. Check the balance in a moment." },
+      {
+        error: "Funding is already in progress. Check the balance in a moment.",
+      },
       { status: 429 },
     );
   }
@@ -102,11 +109,12 @@ export async function POST(request: Request) {
     cooldowns.set(address, now + 60_000);
     return NextResponse.json({
       funded: true,
-      message: "Added 1 devnet SOL to this demo wallet.",
+      message: "Added 0.25 devnet SOL to this demo wallet.",
       signature,
     });
   } catch (error) {
-    const detail = error instanceof Error ? error.message : "Unknown funding error";
+    const detail =
+      error instanceof Error ? error.message : "Unknown funding error";
     console.error("Demo wallet funding failed:", detail);
     return NextResponse.json(
       {
