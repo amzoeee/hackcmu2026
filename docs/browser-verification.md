@@ -18,6 +18,18 @@ A received the full 0.02 SOL pool, less its settlement fee. Creation retained ac
 
 Also exercised: empty-form validation, cancelling settlement review before confirming, absence of judge controls for B, and signing out followed by reload without an unwanted automatic sign-in.
 
+## Additional browser checks
+
+A fresh rehearsal with the synchronized program key also exercised these cases through the UI:
+
+| Scenario         | Balance before (SOL) | Balance after (SOL) | Result                                                                    |
+| ---------------- | -------------------: | ------------------: | ------------------------------------------------------------------------- |
+| NO-side winner   |           0.22541076 |          0.24540576 | Received the 0.02 SOL pool less the settlement fee                        |
+| Empty pot        |           0.23270288 |          0.23269788 | Only the settlement fee was charged                                       |
+| One-sided refund |           0.20540076 |          0.22539576 | The only participant recovered the 0.02 SOL stake less the settlement fee |
+
+The page also passed a 390px mobile layout check, filtered empty states, insufficient-funds recovery, and shorthand decimal stake entry. A deliberately mismatched devnet/local RPC configuration displayed an error, disabled creation, and rejected funding with HTTP 403. The extension chooser's labeled close controls and Escape dismissal were exercised; no extension wallet was installed for a signing test.
+
 ## Local ledger identifiers
 
 - Wallet A: `4h7yKVVWgYqkLcGoGLzXSFmQVpyDBzh1LuZvfubgsjdX`

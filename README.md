@@ -35,7 +35,7 @@ Open [http://localhost:3001](http://localhost:3001) in two separate browser prof
 
 Localnet wallets use separate browser storage from devnet wallets. Local funding only works with an explicitly configured localnet and a loopback RPC, and it ignores any devnet funder key. Privy and wallet-extension onboarding remain devnet-only. Local rehearsal does not replace the final devnet check.
 
-Browser keys survive a local restart, so use the page's test-SOL action to fund restored wallets on the new chain.
+Browser keys survive a local restart, so use **Add test SOL** to fund restored wallets on the new chain.
 
 ## Run and present on devnet
 
@@ -64,7 +64,7 @@ If the public faucet is rate-limited, set a funded, server-only devnet keypair i
 SOLARA_DEMO_FUNDER_KEYPAIR=.wallets/deployer.json
 ```
 
-The funding route adds 0.25 test SOL to low-balance wallets and checks transaction confirmation. Never use a mainnet keypair or put private-key contents in a `NEXT_PUBLIC_` variable. See `.env.example` for custom devnet RPC and WebSocket settings; restart the server after changes.
+The funding route verifies the RPC's devnet identity before funding, adds 0.25 test SOL to low-balance wallets, and checks transaction confirmation. Never use a mainnet keypair or put private-key contents in a `NEXT_PUBLIC_` variable. See `.env.example` for custom devnet RPC and WebSocket settings; restart the server after changes.
 
 For email or Google login, configure a Privy app and set `NEXT_PUBLIC_PRIVY_APP_ID`. Enable the desired login methods and allow the origins used for the demo. Without Privy, the built-in browser wallet and **Use wallet extension** are available. Extensions must use devnet.
 
@@ -88,6 +88,8 @@ npm run tools:check # Verify the installed toolchain
 ```
 
 Program tests cover creation and exact UTF-8 limits, insufficient funds, duplicate/late/full-pot joins, judge and deadline restrictions, invalid payout recipients, payouts for both sides, one-sided refunds, empty pots, and exact rent/dust preservation. Rejected operations are checked for unchanged balances and state. Browser verification covers the actual create/join/settle flow and recovery controls.
+
+Funding endpoint tests also verify the actual devnet identity before faucet or host-key use, failed confirmations, repeat requests, and recovery after RPC failure. Run these alone with `node --import tsx --test tests/demo-funds.test.ts`.
 
 Keep the standalone TypeScript check: Next's built-in checker is disabled because this Next/TypeScript combination rejects valid compiler configuration output. Upstream wallet SDK dependencies still have npm audit findings; do not use forced dependency upgrades without validating wallet behavior.
 

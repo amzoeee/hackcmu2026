@@ -8,12 +8,24 @@ import {
   SystemProgram,
   type Connection,
 } from "@solana/web3.js";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   getAccountabilityProgram,
   getReadOnlyAccountabilityProgram,
 } from "@/lib/anchor/client";
-import { SOLANA_NETWORK, SOLANA_RPC_URL } from "@/lib/solana";
+import {
+  DEVNET_GENESIS,
+  IS_LOCALNET,
+  SOLANA_NETWORK,
+  SOLANA_RPC_URL,
+} from "@/lib/solana";
 
 type PotAccount = {
   creator: PublicKey;
@@ -66,8 +78,10 @@ function formatSol(lamports: BN | bigint | number) {
 }
 
 function parseSol(value: string) {
-  if (!/^\d+(\.\d{1,9})?$/.test(value.trim())) {
-    throw new Error("Enter a stake with up to 9 decimal places.");
+  if (!/^(?:\d+(?:\.\d{0,9})?|\.\d{1,9})$/.test(value.trim())) {
+    throw new Error(
+      "Enter a SOL amount using a decimal point and up to 9 decimal places.",
+    );
   }
   const [whole, fraction = ""] = value.trim().split(".");
   const lamports =
@@ -94,19 +108,23 @@ function explorerUrl(kind: "tx" | "address", value: string) {
 }
 
 function formatDeadline(deadline: BN | bigint | number) {
+  const date = new Date(Number(asBigInt(deadline)) * 1000);
+  if (!Number.isFinite(date.getTime())) return "Beyond calendar range";
   return new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  }).format(new Date(Number(asBigInt(deadline)) * 1000));
+  }).format(date);
 }
 
 function timeRemaining(deadline: BN | bigint | number, now: number) {
   const seconds = Number(asBigInt(deadline)) - Math.floor(now / 1000);
   if (seconds <= 0) return "Deadline passed";
+  const days = Math.floor(seconds / 86_400);
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours % 24}h remaining`;
   if (hours > 0) return `${hours}h ${minutes}m remaining`;
   return minutes > 0
     ? `${minutes}m ${seconds % 60}s remaining`
@@ -144,7 +162,7 @@ function actionError(error: unknown) {
         message,
       )
     ) {
-      return "Devnet is not responding right now. Your last loaded pots are still shown. Try refreshing in a moment.";
+      return "The Solana connection is not responding right now. Your last loaded pots are still shown. Try refreshing in a moment.";
     }
     return message.replace(/^Error: /, "").slice(0, 300);
   }
@@ -166,11 +184,21 @@ export function SolaraApp({
   const [loadingPots, setLoadingPots] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [programReady, setProgramReady] = useState<boolean | null>(null);
-  const [balance, setBalance] = useState<number | null>(null);
+  const [walletBalance, setWalletBalance] = useState<{
+    address: string;
+    lamports: number;
+  } | null>(null);
+  const balance =
+    walletBalance && walletBalance.address === address
+      ? walletBalance.lamports
+      : null;
+  const potRequest = useRef(0);
+  const balanceRequest = useRef(0);
   const [now, setNow] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const errorMessage = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [task, setTask] = useState("");
   const [stake, setStake] = useState("0.01");
@@ -192,41 +220,72 @@ export function SolaraApp({
     [connection, wallet],
   );
 
+  useEffect(() => {
+    if (error) errorMessage.current?.scrollIntoView({ block: "center" });
+  }, [error]);
+
   const refreshPots = useCallback(
     async (showLoading = true) => {
+      const request = ++potRequest.current;
       if (showLoading) setLoadingPots(true);
       try {
-        const [programAccount, accounts] = await Promise.all([
+        if (SOLANA_NETWORK !== "devnet" && !IS_LOCALNET) {
+          setProgramReady(null);
+          throw new Error(
+            "Use Solana devnet or the local rehearsal to open this prototype.",
+          );
+        }
+        const [programAccount, accounts, genesis] = await Promise.all([
           connection.getAccountInfo(program.programId, "confirmed"),
           program.account.pot.all(),
+          SOLANA_NETWORK === "devnet"
+            ? connection.getGenesisHash()
+            : Promise.resolve(null),
         ]);
+        if (request !== potRequest.current) return;
+        if (SOLANA_NETWORK === "devnet" && genesis !== DEVNET_GENESIS) {
+          setProgramReady(null);
+          setPots([]);
+          throw new Error(
+            "The configured connection is not Solana devnet. Ask the host to correct the RPC setting.",
+          );
+        }
         setProgramReady(Boolean(programAccount?.executable));
         setLoadError(null);
         setPots(
           accounts
             .map(({ publicKey, account }) => ({ ...account, publicKey }))
-            .sort((left, right) =>
-              Number(asBigInt(right.createdAt) - asBigInt(left.createdAt)),
+            .sort(
+              (left, right) =>
+                Number(asBigInt(right.createdAt) - asBigInt(left.createdAt)) ||
+                Number(asBigInt(right.identifier) - asBigInt(left.identifier)),
             ),
         );
       } catch (fetchError) {
-        setLoadError(actionError(fetchError));
+        if (request === potRequest.current)
+          setLoadError(actionError(fetchError));
       } finally {
-        if (showLoading) setLoadingPots(false);
+        if (request === potRequest.current) setLoadingPots(false);
       }
     },
     [connection, program],
   );
 
   const refreshBalance = useCallback(async () => {
+    const request = ++balanceRequest.current;
     if (!wallet) {
-      setBalance(null);
+      setWalletBalance(null);
       return;
     }
     try {
-      setBalance(await connection.getBalance(wallet.publicKey, "confirmed"));
+      const lamports = await connection.getBalance(
+        wallet.publicKey,
+        "confirmed",
+      );
+      if (request === balanceRequest.current)
+        setWalletBalance({ address: wallet.publicKey.toBase58(), lamports });
     } catch {
-      setBalance(null);
+      if (request === balanceRequest.current) setWalletBalance(null);
     }
   }, [connection, wallet]);
 
@@ -238,6 +297,7 @@ export function SolaraApp({
     };
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
+      potRequest.current += 1;
       window.clearTimeout(initial);
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
@@ -252,6 +312,7 @@ export function SolaraApp({
     };
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
+      balanceRequest.current += 1;
       window.clearTimeout(initial);
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
@@ -298,7 +359,7 @@ export function SolaraApp({
       await onDisconnect();
       setNotice(null);
       setSignature(null);
-      setBalance(null);
+      setWalletBalance(null);
       setSettlement(null);
       setFilter("all");
     } catch (disconnectError) {
@@ -610,7 +671,7 @@ export function SolaraApp({
         </div>
       ) : null}
       {error ? (
-        <div className="message message-error" role="alert">
+        <div className="message message-error" role="alert" ref={errorMessage}>
           <span>{error}</span>
           <button
             className="text-button"
@@ -926,7 +987,7 @@ export function SolaraApp({
                         {participantCount === 0
                           ? "Empty pot settled. No SOL to distribute."
                           : refunded
-                            ? `All ${participantCount} ${participantCount === 1 ? "participant was" : "participants were"} refunded because no one chose the winning side.`
+                            ? `${participantCount === 1 ? "The only participant was" : `All ${participantCount} participants were`} refunded because no one chose the winning side.`
                             : `Pool paid to ${winners.length} ${pot.outcome ? "YES" : "NO"} ${winners.length === 1 ? "participant" : "participants"}.`}
                       </p>
                     )}
@@ -955,7 +1016,11 @@ export function SolaraApp({
                         <button
                           className="button button-secondary"
                           type="button"
-                          disabled={pending !== null || participantCount >= 10}
+                          disabled={
+                            pending !== null ||
+                            participantCount >= 10 ||
+                            programReady !== true
+                          }
                           onClick={() => void joinPot(pot, "yes")}
                         >
                           {pending === `join-${pot.publicKey.toBase58()}-yes`
@@ -965,7 +1030,11 @@ export function SolaraApp({
                         <button
                           className="button button-secondary"
                           type="button"
-                          disabled={pending !== null || participantCount >= 10}
+                          disabled={
+                            pending !== null ||
+                            participantCount >= 10 ||
+                            programReady !== true
+                          }
                           onClick={() => void joinPot(pot, "no")}
                         >
                           {pending === `join-${pot.publicKey.toBase58()}-no`
@@ -984,7 +1053,7 @@ export function SolaraApp({
                         <button
                           className="button button-primary"
                           type="button"
-                          disabled={pending !== null}
+                          disabled={pending !== null || programReady !== true}
                           onClick={() =>
                             setSettlement({
                               pot: pot.publicKey.toBase58(),
@@ -997,7 +1066,7 @@ export function SolaraApp({
                         <button
                           className="button button-secondary"
                           type="button"
-                          disabled={pending !== null}
+                          disabled={pending !== null || programReady !== true}
                           onClick={() =>
                             setSettlement({
                               pot: pot.publicKey.toBase58(),
@@ -1025,14 +1094,16 @@ export function SolaraApp({
                           ? "This pot is empty. It will close without a payout."
                           : selectedWinners.length === 0
                             ? `No one chose ${settlement.completed ? "YES" : "NO"}. Every participant will receive their stake back.`
-                            : `${selectedWinners.length} ${settlement.completed ? "YES" : "NO"} ${selectedWinners.length === 1 ? "participant will" : "participants will"} split the ${formatSol(pool)} SOL staked pool.`}{" "}
+                            : selectedWinners.length === 1
+                              ? `The ${settlement.completed ? "YES" : "NO"} participant will receive the ${formatSol(pool)} SOL staked pool.`
+                              : `${selectedWinners.length} ${settlement.completed ? "YES" : "NO"} participants will split the ${formatSol(pool)} SOL staked pool.`}{" "}
                         This decision is final.
                       </p>
                       <div className="button-group">
                         <button
                           className="button button-primary"
                           type="button"
-                          disabled={pending !== null}
+                          disabled={pending !== null || programReady !== true}
                           onClick={() =>
                             void settlePot(pot, settlement.completed)
                           }
