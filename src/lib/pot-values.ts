@@ -79,3 +79,12 @@ export function deadlineFromNow(minutes: number) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 19);
 }
+
+/** The next end of day in local time, for the "End of Day" quick deadline. */
+export function deadlineEndOfDay() {
+  const date = new Date();
+  date.setHours(23, 59, 59, 0);
+  if (date.getTime() <= Date.now()) date.setDate(date.getDate() + 1);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 19);
+}
