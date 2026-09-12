@@ -9,7 +9,13 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
-import { SOLANA_NETWORK, SOLANA_RPC_URL } from "@/lib/solana";
+import {
+  DEMO_WALLETS_ENABLED,
+  IS_LOCALNET,
+  SOLANA_NETWORK,
+  SOLANA_RPC_URL,
+  SOLANA_WS_URL,
+} from "@/lib/solana";
 
 export const runtime = "nodejs";
 
@@ -22,7 +28,11 @@ async function loadFunder() {
   const filename = process.env.SOLARA_DEMO_FUNDER_KEYPAIR;
   if (!filename) return null;
   const secret = JSON.parse(await readFile(filename, "utf8")) as number[];
-  if (!Array.isArray(secret) || secret.length !== 64) {
+  if (
+    !Array.isArray(secret) ||
+    secret.length !== 64 ||
+    secret.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)
+  ) {
     throw new Error(
       "The demo funder keypair is not a valid Solana keypair file.",
     );
@@ -31,7 +41,7 @@ async function loadFunder() {
 }
 
 async function sendDemoSol(connection: Connection, recipient: PublicKey) {
-  const funder = await loadFunder();
+  const funder = IS_LOCALNET ? null : await loadFunder();
   if (funder) {
     const funderBalance = await connection.getBalance(
       funder.publicKey,
@@ -56,17 +66,23 @@ async function sendDemoSol(connection: Connection, recipient: PublicKey) {
 
   const latestBlockhash = await connection.getLatestBlockhash("confirmed");
   const signature = await connection.requestAirdrop(recipient, FUND_AMOUNT);
-  await connection.confirmTransaction(
+  const confirmation = await connection.confirmTransaction(
     { signature, ...latestBlockhash },
     "confirmed",
   );
+  if (confirmation.value.err) {
+    throw new Error("The test SOL faucet transfer did not succeed.");
+  }
   return signature;
 }
 
 export async function POST(request: Request) {
-  if (SOLANA_NETWORK !== "devnet") {
+  if (!DEMO_WALLETS_ENABLED) {
     return NextResponse.json(
-      { error: "Demo funding is available on devnet only." },
+      {
+        error:
+          "Demo funding requires devnet or an explicit localnet with a loopback RPC.",
+      },
       { status: 403 },
     );
   }
@@ -85,31 +101,44 @@ export async function POST(request: Request) {
 
   const address = recipient.toBase58();
   const now = Date.now();
-  if (inFlight.has(address) || (cooldowns.get(address) ?? 0) > now) {
+  for (const [fundedAddress, expiresAt] of cooldowns) {
+    if (expiresAt <= now) cooldowns.delete(fundedAddress);
+  }
+  const retryAfter = Math.max(
+    1,
+    Math.ceil(((cooldowns.get(address) ?? now + 10_000) - now) / 1000),
+  );
+  if (inFlight.has(address) || cooldowns.has(address)) {
     return NextResponse.json(
       {
-        error: "Funding is already in progress. Check the balance in a moment.",
+        error: inFlight.has(address)
+          ? "Funding is already in progress. Check the balance in a moment."
+          : `This wallet was just funded. Try again in ${retryAfter} seconds if needed.`,
       },
-      { status: 429 },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
     );
   }
 
   inFlight.add(address);
   try {
-    const connection = new Connection(SOLANA_RPC_URL, "confirmed");
+    const connection = new Connection(SOLANA_RPC_URL, {
+      commitment: "confirmed",
+      disableRetryOnRateLimit: true,
+      wsEndpoint: SOLANA_WS_URL,
+    });
     const currentBalance = await connection.getBalance(recipient, "confirmed");
     if (currentBalance >= SUFFICIENT_BALANCE) {
       return NextResponse.json({
         funded: false,
-        message: "This demo wallet already has enough devnet SOL.",
+        message: `This demo wallet already has enough ${SOLANA_NETWORK} SOL.`,
       });
     }
 
     const signature = await sendDemoSol(connection, recipient);
-    cooldowns.set(address, now + 60_000);
+    cooldowns.set(address, Date.now() + 60_000);
     return NextResponse.json({
       funded: true,
-      message: "Added 0.25 devnet SOL to this demo wallet.",
+      message: `Added 0.25 ${SOLANA_NETWORK} SOL to this demo wallet.`,
       signature,
     });
   } catch (error) {
@@ -118,8 +147,11 @@ export async function POST(request: Request) {
     console.error("Demo wallet funding failed:", detail);
     return NextResponse.json(
       {
-        error:
-          "The devnet faucet is busy. Ask the host to fund the demo wallet or configure a demo funder.",
+        error: IS_LOCALNET
+          ? "The local validator could not add test SOL. Check that the local rehearsal is still running, then try again."
+          : process.env.SOLARA_DEMO_FUNDER_KEYPAIR
+            ? "The host could not add test SOL. Ask the host to check the demo funder's balance and connection, then try again."
+            : "The devnet faucet is busy. Try again later, or ask the host to fund this wallet with devnet SOL.",
       },
       { status: 503 },
     );

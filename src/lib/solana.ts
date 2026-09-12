@@ -6,3 +6,18 @@ export const SOLANA_WS_URL =
 
 export const SOLANA_NETWORK =
   process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet";
+
+function hasLoopbackRpc() {
+  try {
+    const url = new URL(SOLANA_RPC_URL);
+    return (
+      ["http:", "https:"].includes(url.protocol) &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export const IS_LOCALNET = SOLANA_NETWORK === "localnet" && hasLoopbackRpc();
+export const DEMO_WALLETS_ENABLED = SOLANA_NETWORK === "devnet" || IS_LOCALNET;

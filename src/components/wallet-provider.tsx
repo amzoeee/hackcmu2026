@@ -8,7 +8,7 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 import type { ReactNode } from "react";
-import { SOLANA_RPC_URL, SOLANA_WS_URL } from "@/lib/solana";
+import { SOLANA_NETWORK, SOLANA_RPC_URL, SOLANA_WS_URL } from "@/lib/solana";
 
 // Wallet Standard discovers installed wallets (including Phantom and Solflare).
 const wallets: [] = [];
@@ -18,15 +18,15 @@ export function SolanaWalletProvider({ children }: { children: ReactNode }) {
   const walletProviders = (
     <ConnectionProvider
       endpoint={SOLANA_RPC_URL}
-      config={{ commitment: "confirmed" }}
+      config={{ commitment: "confirmed", wsEndpoint: SOLANA_WS_URL }}
     >
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect={SOLANA_NETWORK === "devnet"}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
   );
 
-  if (!privyAppId) return walletProviders;
+  if (!privyAppId || SOLANA_NETWORK !== "devnet") return walletProviders;
 
   return (
     <PrivyProvider
