@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { it } from "node:test";
-import { AnchorProvider, Wallet } from "@coral-xyz/anchor";
+import { AnchorError, AnchorProvider, Wallet, utils } from "@coral-xyz/anchor";
 import {
   Connection,
   Keypair,
+  SendTransactionError,
   SystemProgram,
   Transaction,
   type TransactionError,
@@ -84,6 +85,251 @@ it(
     }
   },
 );
+
+it(
+  "ends a stalled signed submission after 60 seconds and retains its signature through Anchor",
+  { timeout: 75_000 },
+  async (t) => {
+    const blockhash = Keypair.generate().publicKey.toBase58();
+    let submittedSignature = "";
+    let submissions = 0;
+    const server = createServer(async (request, response) => {
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const body = JSON.parse(Buffer.concat(chunks).toString()) as {
+        id: string;
+        method: string;
+        params: string[];
+      };
+      if (body.method === "sendTransaction") {
+        submissions += 1;
+        const transaction = Transaction.from(
+          Buffer.from(body.params[0], "base64"),
+        );
+        assert.ok(transaction.signature);
+        submittedSignature = utils.bytes.bs58.encode(transaction.signature);
+        return;
+      }
+      response.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: body.id,
+          result: {
+            context: { slot: 1 },
+            value: { blockhash, lastValidBlockHeight: 100 },
+          },
+        }),
+      );
+    });
+    t.after(async () => {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    });
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+    const address = server.address();
+    assert.ok(address && typeof address !== "string");
+    const wallet = new Wallet(Keypair.generate());
+    const program = getAccountabilityProgram(
+      new Connection(`http://127.0.0.1:${address.port}`, "confirmed"),
+      wallet,
+    );
+    const confirm = t.mock.method(
+      program.provider.connection,
+      "confirmTransaction",
+      async () => {
+        assert.fail("Confirmation cannot start without a submission response");
+      },
+    );
+    const started = Date.now();
+    await assert.rejects(
+      program.methods
+        .joinPot({ yes: {} })
+        .accountsPartial({
+          participant: wallet.publicKey,
+          pot: Keypair.generate().publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc(),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal(error.name, "Error");
+        assert.match(error.message, /may have succeeded.*Check its status/);
+        assert.ok(error.cause instanceof Error);
+        assert.match(error.cause.message, /timeout|abort/i);
+        assert.ok(submittedSignature);
+        assert.equal(Reflect.get(error, "signature"), submittedSignature);
+        return true;
+      },
+    );
+    assert.ok(
+      Date.now() - started >= 59_000,
+      "Submission gets its full 60-second window",
+    );
+    assert.ok(
+      Date.now() - started < 70_000,
+      "A stalled send must release the caller",
+    );
+    assert.equal(
+      submissions,
+      1,
+      "An uncertain submission must not be automatically sent again",
+    );
+    assert.equal(confirm.mock.callCount(), 0);
+  },
+);
+
+it("preserves explicit submission errors and translates logged confirmation failures correctly", async (t) => {
+  let mode: "transport" | "limited" | "preflight" | "confirmed" = "transport";
+  const blockhash = Keypair.generate().publicKey.toBase58();
+  const wallet = new Wallet(Keypair.generate());
+  let submittedSignature = "";
+  let submissions = 0;
+  const logs = [
+    "Program log: AnchorError occurred. Error Code: AlreadyParticipating. Error Number: 6007. Error Message: This wallet has already joined the pot.",
+  ];
+  const confirmationError = { InstructionError: [0, { Custom: 6007 }] };
+  const server = createServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString()) as {
+      id: string;
+      method: string;
+      params: string[];
+    };
+    let result: unknown;
+    if (body.method === "getLatestBlockhash") {
+      result = {
+        context: { slot: 1 },
+        value: { blockhash, lastValidBlockHeight: 100 },
+      };
+    } else if (body.method === "sendTransaction") {
+      submissions += 1;
+      const transaction = Transaction.from(
+        Buffer.from(body.params[0], "base64"),
+      );
+      assert.ok(transaction.signature);
+      submittedSignature = utils.bytes.bs58.encode(transaction.signature);
+      if (mode === "transport" || mode === "limited") {
+        response
+          .writeHead(mode === "limited" ? 429 : 500)
+          .end("RPC unavailable");
+        return;
+      }
+      if (mode === "preflight") {
+        response.end(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: body.id,
+            error: {
+              code: -32002,
+              message: "Transaction simulation failed: denied.",
+              data: { logs: ["Program log: denied"] },
+            },
+          }),
+        );
+        return;
+      }
+      result = submittedSignature;
+    } else {
+      result = {
+        slot: 2,
+        meta: {
+          err: confirmationError,
+          fee: 5000,
+          preBalances: [100000],
+          postBalances: [95000],
+          logMessages: logs,
+        },
+        transaction: {
+          signatures: [submittedSignature],
+          message: {
+            accountKeys: [wallet.publicKey.toBase58()],
+            header: {
+              numRequiredSignatures: 1,
+              numReadonlySignedAccounts: 0,
+              numReadonlyUnsignedAccounts: 0,
+            },
+            instructions: [],
+            recentBlockhash: blockhash,
+          },
+        },
+      };
+    }
+    response.end(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }));
+  });
+  t.after(async () => {
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const program = getAccountabilityProgram(
+    new Connection(`http://127.0.0.1:${address.port}`, "confirmed"),
+    wallet,
+  );
+  const join = program.methods.joinPot({ yes: {} }).accountsPartial({
+    participant: wallet.publicKey,
+    pot: Keypair.generate().publicKey,
+    systemProgram: SystemProgram.programId,
+  });
+  const confirm = t.mock.method(
+    program.provider.connection,
+    "confirmTransaction",
+    async () => ({
+      context: { slot: 2 },
+      value: { err: confirmationError },
+    }),
+  );
+  for (const failure of ["transport", "limited"] as const) {
+    mode = failure;
+    const before = submissions;
+    await assert.rejects(join.rpc(), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /may have succeeded.*Check its status/);
+      assert.doesNotMatch(
+        error.message,
+        /failed to fetch|fetch failed|network request|429|too many requests/i,
+      );
+      assert.equal(Reflect.get(error, "signature"), submittedSignature);
+      return true;
+    });
+    assert.equal(submissions - before, 1);
+  }
+  mode = "preflight";
+  for (const skipPreflight of [false, true]) {
+    await assert.rejects(join.rpc({ skipPreflight }), (error: unknown) => {
+      assert.ok(error instanceof SendTransactionError);
+      assert.match(error.message, /denied/);
+      assert.doesNotMatch(error.message, /may have succeeded|Unknown action/);
+      assert.deepEqual(error.logs, ["Program log: denied"]);
+      return true;
+    });
+  }
+  assert.equal(confirm.mock.callCount(), 0);
+  mode = "confirmed";
+  await assert.rejects(join.rpc(), (error: unknown) => {
+    assert.ok(error instanceof AnchorError);
+    assert.equal(error.error.errorCode.code, "AlreadyParticipating");
+    assert.equal(
+      error.error.errorMessage,
+      "This wallet has already joined the pot",
+    );
+    return true;
+  });
+  assert.equal(confirm.mock.callCount(), 1);
+  await assert.rejects(
+    program.provider.connection.getTransaction(submittedSignature),
+    (error: unknown) => {
+      assert.ok(error instanceof SendTransactionError);
+      assert.equal(Reflect.get(error, "signature"), submittedSignature);
+      assert.deepEqual(error.logs, logs);
+      return true;
+    },
+  );
+});
 
 it(
   "bounds pre-sign and error-log reads without interrupting wallet approval or hiding confirmed errors",

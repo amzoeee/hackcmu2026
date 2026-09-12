@@ -53,6 +53,8 @@ Open [http://localhost:3000](http://localhost:3000). The public devnet RPC is th
 
 The page includes quick deadlines, pot filters, shareable pot links, participant lists, transaction links, and a payout review before settlement. Copy a wallet address from the header when naming another judge. Pot state comes directly from the program, including before login, and pots and balances refresh every eight seconds. Creating a pot pays account rent and a network fee; the creator stakes separately. Tasks are limited to **160 UTF-8 bytes**, and each pot allows at most 10 participants at one fixed stake.
 
+If a transaction's submission response is lost, the page keeps its transaction link and releases the controls. Check that transaction and refresh the pots and wallet balance before retrying: it may already have succeeded. Settlement reviews and winner receipts show each recipient's share of the staked pool, including the original stake.
+
 Before presenting:
 
 ```sh
