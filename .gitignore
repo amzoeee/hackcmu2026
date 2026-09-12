@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+.env*
+!.env.example
+.DS_Store
+.tools/
+.anchor/
+target/
+test-ledger/
+*-keypair.json
+.wallets/
+next-env.d.ts

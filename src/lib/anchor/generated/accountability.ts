@@ -1,0 +1,41 @@
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/accountability.json`.
+ */
+export type Accountability = {
+  "address": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+  "metadata": {
+    "name": "accountability",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Accountability staking devnet prototype"
+  },
+  "instructions": [
+    {
+      "name": "initialize",
+      "docs": [
+        "Smoke-test instruction. Replace with create, join, and settle as implemented.",
+        "No accounts are created and no SOL is transferred."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": []
+    }
+  ]
+};

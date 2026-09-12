@@ -1,0 +1,24 @@
+[toolchain]
+anchor_version = "0.32.1"
+solana_version = "2.3.0"
+package_manager = "npm"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.devnet]
+accountability = "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb"
+
+[programs.localnet]
+accountability = "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = ".wallets/deployer.json"
+
+[scripts]
+test = "npm run test:anchor"

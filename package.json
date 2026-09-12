@@ -1,0 +1,46 @@
+{
+  "name": "accountability-staking",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "tools:setup": "bash scripts/setup-tools.sh",
+    "tools:check": "bash scripts/with-tools.sh bash scripts/check-tools.sh",
+    "anchor": "bash scripts/with-tools.sh anchor",
+    "anchor:build": "bash scripts/with-tools.sh bash scripts/build-program.sh",
+    "anchor:test": "npm run anchor:build && npm run anchor -- test --skip-build",
+    "anchor:deploy:devnet": "npm run anchor -- deploy --provider.cluster devnet",
+    "test": "npm run anchor:test",
+    "test:anchor": "node --import tsx --test --test-timeout=100000 tests/*.test.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "0.32.1",
+    "@solana/wallet-adapter-base": "0.9.28",
+    "@solana/wallet-adapter-react": "0.15.40",
+    "@solana/wallet-adapter-react-ui": "0.9.40",
+    "@solana/web3.js": "1.99.0",
+    "next": "16.3.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.5",
+    "prettier": "3.9.6",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3"
+  }
+}

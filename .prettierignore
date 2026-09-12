@@ -1,0 +1,11 @@
+node_modules
+.next
+.tools
+.anchor
+target
+package-lock.json
+Cargo.lock
+src/lib/anchor/generated
+next-env.d.ts
+AGENTS.md
+CLAUDE.md
