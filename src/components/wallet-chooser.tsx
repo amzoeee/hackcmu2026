@@ -132,7 +132,9 @@ export function WalletChooserProvider({ children }: { children: ReactNode }) {
           className="wallet-dialog-back"
           onClick={() => setVisible(false)}
         >
-          {demoAvailable ? "Back to demo" : "Back to Solara"}
+          {demoAvailable
+            ? "Back to demo"
+            : "Back to Finance your Responsibilities"}
         </button>
       </dialog>
     </WalletModalContext.Provider>

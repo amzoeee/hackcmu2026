@@ -3,7 +3,7 @@ import { SolanaWalletProvider } from "@/components/wallet-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Solara — accountability stakes",
+  title: "Finance your Responsibilities",
   description:
     "Stake test SOL on a commitment with your group. A named judge settles the outcome after the deadline.",
 };
