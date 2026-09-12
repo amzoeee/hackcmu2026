@@ -227,17 +227,13 @@ export function GroupChallengeForm({
           !Number.isFinite(deadlineSeconds) ||
           deadlineSeconds <= Math.floor(Date.now() / 1000) + 30
         )
-          throw new Error(
-            "Choose a deadline at least 30 seconds from now so your friends have time to join.",
-          );
+          throw new Error("Deadline must be at least 30 seconds away.");
         let judgeKey: PublicKey;
         try {
           judgeKey = new PublicKey(judge.trim() || wallet.publicKey);
           if (!PublicKey.isOnCurve(judgeKey.toBytes())) throw new Error();
         } catch {
-          throw new Error(
-            "Enter a valid judge wallet, or leave it blank to judge the group yourself.",
-          );
+          throw new Error("Invalid judge address.");
         }
         const groupId = Array.from(
           crypto.getRandomValues(new Uint8Array(4)),
@@ -253,15 +249,11 @@ export function GroupChallengeForm({
             participant = new PublicKey(friend.participant.trim());
             if (!PublicKey.isOnCurve(participant.toBytes())) throw new Error();
           } catch {
-            throw new Error(
-              `Friend ${index + 1} needs a valid wallet address.`,
-            );
+            throw new Error(`Friend ${index + 1}: invalid wallet address.`);
           }
           const address = participant.toBase58();
           if (participant.equals(wallet.publicKey))
-            throw new Error(
-              "Friends must use different wallets from the organizer, who takes NO on every pot.",
-            );
+            throw new Error("Friends can't use your wallet.");
           if (seen.has(address))
             throw new Error("Use a different wallet for each friend.");
           seen.add(address);
@@ -324,7 +316,7 @@ export function GroupChallengeForm({
         seen.add(entry.participant);
       }
       if (active.pending) {
-        showProgress("Checking the previous transaction before resuming…");
+        showProgress("Checking previous transaction…");
         const unresolved = active.pending;
         const confirmed =
           (await checkGroupSubmission(readConnection, unresolved)) ===
@@ -355,13 +347,13 @@ export function GroupChallengeForm({
               account.judge.toBase58() !== active!.judge)
           )
             throw new Error(
-              "A saved pot does not match this group draft. Setup has stopped.",
+              "A saved pot doesn't match this group draft. Setup stopped.",
             );
           if (
             account?.yesParticipants.some((key) => key.equals(wallet.publicKey))
           )
             throw new Error(
-              "The organizer already joined YES on one of these pots and cannot take NO. The existing pots remain available below.",
+              "You already joined YES on one of these pots, so you can't take NO.",
             );
           return {
             ...entry,
@@ -379,19 +371,19 @@ export function GroupChallengeForm({
       if (active.entries.every((entry) => entry.created && entry.joined)) {
         const message =
           active.deadline <= Math.floor(Date.now() / 1000)
-            ? "Group setup is complete and the deadline has passed. Open the existing pots below to review settlement or refunds."
-            : "Group ready. Share the group link below so each friend can join YES.";
+            ? "Group setup complete. The deadline has passed."
+            : "Group ready. Share the group link.";
         showProgress(message);
         onResult(message, active.signatures.at(-1));
         return;
       }
       if (active.deadline <= Math.floor(Date.now() / 1000) + 10)
         throw new Error(
-          "This group's deadline has passed or is too close to finish setup. Created pots remain listed below; their judge or timeout refund can return their stakes.",
+          "Deadline passed or too close to finish setup. Created pots stay listed.",
         );
       const missingCreates = active.entries.filter((entry) => !entry.created);
       const missingJoins = active.entries.filter((entry) => !entry.joined);
-      showProgress("Checking the organizer's funding…");
+      showProgress("Checking balance…");
       const [rentNow, balance] = await Promise.all([
         readConnection.getMinimumBalanceForRentExemption(POT_ACCOUNT_BYTES),
         readConnection.getBalance(wallet.publicKey),
@@ -402,7 +394,7 @@ export function GroupChallengeForm({
         BigInt((missingCreates.length + missingJoins.length) * 5_000);
       if (BigInt(balance) < reserve)
         throw new Error(
-          `The organizer needs approximately ${formatSol(reserve)} SOL to finish rent, NO stakes, and fees. Add test SOL, then resume.`,
+          `Need about ${formatSol(reserve)} SOL to finish. Add test SOL, then resume.`,
         );
 
       // Anchor overwrites recentBlockhash inside sendAndConfirm, so the only way
@@ -418,13 +410,11 @@ export function GroupChallengeForm({
         signAllTransactions: wallet.signAllTransactions.bind(wallet),
         signTransaction: async (transaction) => {
           if (currentStorageKey.current !== storageKey)
-            throw new Error(
-              "The wallet changed. Switch back to resume its saved group setup.",
-            );
+            throw new Error("Wallet changed. Switch back to resume.");
           const signed = await wallet.signTransaction(transaction);
           if (currentStorageKey.current !== storageKey)
             throw new Error(
-              "The wallet changed before submission. Switch back to resume its saved group setup.",
+              "Wallet changed before submission. Switch back to resume.",
             );
           if (
             !(signed instanceof Transaction) ||
@@ -438,7 +428,7 @@ export function GroupChallengeForm({
           const prepared = latestBlockhash;
           if (!prepared || prepared.blockhash !== signed.recentBlockhash)
             throw new Error(
-              "This transaction's expiry could not be recorded, so it was not submitted. Reload and use Resume to continue safely.",
+              "Transaction expiry couldn't be recorded, so it wasn't sent. Reload and resume.",
             );
           save({
             ...active,
@@ -503,11 +493,9 @@ export function GroupChallengeForm({
       const batches = [...createBatches, ...joinBatches];
       for (let index = 0; index < batches.length; index++) {
         if (currentStorageKey.current !== storageKey)
-          throw new Error(
-            "The wallet changed. Switch back to resume its saved group setup.",
-          );
+          throw new Error("Wallet changed. Switch back to resume.");
         showProgress(
-          `${index < createBatches.length ? "Creating pots" : "Adding your NO stakes"} · transaction ${index + 1} of ${batches.length}. Approve in your wallet.`,
+          `${index < createBatches.length ? "Creating pots" : "Adding NO stakes"} · ${index + 1}/${batches.length} · approve in wallet`,
         );
         // Never let one batch's expiry stand in for the next one's.
         latestBlockhash = null;
@@ -518,16 +506,14 @@ export function GroupChallengeForm({
           signatures: [...active.signatures, signature],
         });
         onResult(
-          `Group setup: transaction ${index + 1} of ${batches.length} confirmed.`,
+          `Group setup ${index + 1}/${batches.length} confirmed.`,
           signature,
         );
         await reconcile();
       }
-      showProgress(
-        "Group ready. Each friend can now join YES on their own pot.",
-      );
+      showProgress("Group ready.");
       onResult(
-        "Group created and the organizer's NO stakes are in. Share the group link below so each friend can join YES.",
+        "Group created. Share the group link.",
         active.signatures.at(-1),
       );
     } catch (error) {
@@ -545,11 +531,7 @@ export function GroupChallengeForm({
       }
       // Nothing is saved until a draft exists, so do not promise recoverable
       // progress for an error raised while validating the form.
-      showProgress(
-        active
-          ? "Setup paused. Confirmed pots and stakes are saved; Resume checks the chain before continuing."
-          : "",
-      );
+      showProgress(active ? "Paused. Progress saved." : "");
       if (error instanceof Error && active?.pending)
         Object.assign(error, { signature: active.pending.signature });
       onError(error);
@@ -583,302 +565,290 @@ export function GroupChallengeForm({
     );
     try {
       await navigator.clipboard.writeText(url.toString());
-      onResult(
-        "Group link copied. Send it to your friends so they can join YES on their own pots.",
-      );
+      onResult("Group link copied.");
     } catch {
       onError(new Error(`Copy this group link: ${url.toString()}`));
     }
   }
 
   return (
-    <details className="group-challenge">
-      <summary>Group challenge · one task per friend</summary>
-      <form className="create-form" onSubmit={submit} noValidate>
-        <p className="form-note">
-          You pay to create each pot and stake NO on every task. Each friend
-          connects their own wallet and stakes YES. The judge decides each task
-          separately.
-        </p>
-        {!activePlan ? (
-          <>
-            {friends.map((friend, index) => (
-              <fieldset className="group-friend" key={index} disabled={pending}>
-                <legend>Friend {index + 1}</legend>
-                <label>
-                  Friend&apos;s wallet
-                  <input
-                    value={friend.participant}
-                    autoComplete="off"
-                    spellCheck={false}
-                    onChange={(event) =>
-                      setFriends(
-                        friends.map((row, rowIndex) =>
-                          rowIndex === index
-                            ? { ...row, participant: event.target.value }
-                            : row,
-                        ),
-                      )
-                    }
-                    placeholder="Their YES wallet address"
-                  />
-                </label>
-                <label>
-                  Their task
-                  <textarea
-                    value={friend.task}
-                    maxLength={160}
-                    onChange={(event) =>
-                      setFriends(
-                        friends.map((row, rowIndex) =>
-                          rowIndex === index
-                            ? { ...row, task: event.target.value }
-                            : row,
-                        ),
-                      )
-                    }
-                    placeholder="Sam: finish the pitch before the demo"
-                  />
-                </label>
-                <span
-                  className={`field-note ${friendBytes[index] > MAX_GROUP_TASK_BYTES ? "field-error" : ""}`}
-                >
-                  {friendBytes[index]}/{MAX_GROUP_TASK_BYTES} bytes including
-                  the group tag.
-                </span>
-                {friends.length > 2 ? (
-                  <button
-                    className="text-button"
-                    type="button"
-                    onClick={() =>
-                      setFriends(
-                        friends.filter((_, rowIndex) => rowIndex !== index),
-                      )
-                    }
-                  >
-                    Remove friend {index + 1}
-                  </button>
-                ) : null}
-              </fieldset>
-            ))}
-            {friends.length < 10 ? (
-              <button
-                className="button button-secondary"
-                type="button"
-                disabled={pending}
-                onClick={() =>
-                  setFriends([...friends, { participant: "", task: "" }])
-                }
-              >
-                Add friend
-              </button>
-            ) : null}
-            <div className="form-grid">
-              <label>
-                Stake per pot (SOL)
-                <input
-                  value={stake}
-                  disabled={pending}
-                  inputMode="decimal"
-                  onChange={(event) => setStake(event.target.value)}
-                />
-              </label>
-              <label>
-                Shared deadline
-                <input
-                  type="datetime-local"
-                  step="1"
-                  value={deadline}
-                  disabled={pending}
-                  onChange={(event) => setDeadline(event.target.value)}
-                />
-              </label>
-            </div>
-            <div className="deadline-presets">
-              <span>From now</span>
-              {[5, 15, 60].map((minutes) => (
+    <form className="form" onSubmit={submit} noValidate>
+      <p className="hint">One pot per friend. You stake NO; they join YES.</p>
+      {!activePlan ? (
+        <>
+          {friends.map((friend, index) => (
+            <fieldset className="friend" key={index} disabled={pending}>
+              <legend>Friend {index + 1}</legend>
+              {friends.length > 2 ? (
                 <button
-                  key={minutes}
-                  className="text-button"
+                  className="chip friend-remove"
                   type="button"
-                  disabled={pending}
-                  onClick={() => setDeadline(deadlineFromNow(minutes))}
+                  aria-label={`Remove friend ${index + 1}`}
+                  onClick={() =>
+                    setFriends(
+                      friends.filter((_, rowIndex) => rowIndex !== index),
+                    )
+                  }
                 >
-                  {minutes === 60 ? "1 hour" : `${minutes} minutes`}
+                  Remove
                 </button>
-              ))}
-            </div>
-            <label>
-              Judge for all tasks
+              ) : null}
+              <label className="field">
+                Wallet
+                <input
+                  value={friend.participant}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) =>
+                    setFriends(
+                      friends.map((row, rowIndex) =>
+                        rowIndex === index
+                          ? { ...row, participant: event.target.value }
+                          : row,
+                      ),
+                    )
+                  }
+                  placeholder="Friend's wallet address"
+                />
+              </label>
+              <label className="field">
+                Task
+                <span
+                  className={`counter ${friendBytes[index] > MAX_GROUP_TASK_BYTES ? "counter-over" : ""}`}
+                >
+                  {friendBytes[index]}/{MAX_GROUP_TASK_BYTES}
+                </span>
+                <textarea
+                  value={friend.task}
+                  maxLength={160}
+                  onChange={(event) =>
+                    setFriends(
+                      friends.map((row, rowIndex) =>
+                        rowIndex === index
+                          ? { ...row, task: event.target.value }
+                          : row,
+                      ),
+                    )
+                  }
+                  placeholder="Finish the pitch before the demo"
+                />
+              </label>
+            </fieldset>
+          ))}
+          {friends.length < 10 ? (
+            <button
+              className="button button-small button-block"
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                setFriends([...friends, { participant: "", task: "" }])
+              }
+            >
+              + Add friend
+            </button>
+          ) : null}
+          <div className="field-grid">
+            <label className="field">
+              Stake / pot
               <input
-                value={judge}
+                value={stake}
                 disabled={pending}
-                onChange={(event) => setJudge(event.target.value)}
-                placeholder="Leave blank to judge them yourself"
-                autoComplete="off"
-                spellCheck={false}
+                inputMode="decimal"
+                onChange={(event) => setStake(event.target.value)}
               />
             </label>
-          </>
-        ) : (
-          <div className="group-progress">
-            <p>
-              <strong>Group {activePlan.groupId}</strong> ·{" "}
-              {!verified ? "Saved progress · " : ""}
-              {activePlan.entries.filter((entry) => entry.created).length}/
-              {count} pots created ·{" "}
-              {activePlan.entries.filter((entry) => entry.joined).length}/
-              {count} NO stakes confirmed.
-            </p>
-            <ul>
-              {activePlan.entries.map((entry, index) => (
-                <li key={entry.pot}>
-                  <a href={`#pot-${entry.pot}`}>
-                    {parseGroupTask(entry.task)?.task ?? `Friend ${index + 1}`}
-                  </a>{" "}
-                  ·{" "}
-                  {entry.joined
-                    ? "NO stake added"
-                    : entry.created
-                      ? "Created; NO stake pending"
-                      : "Creation pending"}
-                </li>
-              ))}
-            </ul>
-            {activePlan.signatures.map((signature, index) => (
-              <a
-                key={signature}
-                href={transactionUrl(signature)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Confirmed transaction {index + 1}
-              </a>
-            ))}
-            {activePlan.pending ? (
-              <a
-                href={transactionUrl(activePlan.pending.signature)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Check unresolved transaction
-              </a>
-            ) : null}
+            <label className="field">
+              Deadline
+              <input
+                type="datetime-local"
+                step="1"
+                value={deadline}
+                disabled={pending}
+                onChange={(event) => setDeadline(event.target.value)}
+              />
+            </label>
           </div>
-        )}
-        {!complete ? (
-          <div className="group-cost form-note">
-            {rent !== null && stakeLamports !== null ? (
-              <p>
-                Organizer budget: approximately{" "}
+          <div className="chips" role="group" aria-label="Quick deadlines">
+            {[5, 15, 60].map((minutes) => (
+              <button
+                key={minutes}
+                className="chip"
+                type="button"
+                disabled={pending}
+                onClick={() => setDeadline(deadlineFromNow(minutes))}
+              >
+                {minutes === 60 ? "+1h" : `+${minutes}m`}
+              </button>
+            ))}
+          </div>
+          <label className="field">
+            Judge
+            <input
+              value={judge}
+              disabled={pending}
+              onChange={(event) => setJudge(event.target.value)}
+              placeholder="Wallet address (blank = you)"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+        </>
+      ) : (
+        <div className="box">
+          <p className="cost-total">
+            <span>
+              Group {activePlan.groupId}
+              {!verified ? " · saved" : ""}
+            </span>
+          </p>
+          <p>
+            {activePlan.entries.filter((entry) => entry.created).length}/{count}{" "}
+            created ·{" "}
+            {activePlan.entries.filter((entry) => entry.joined).length}/{count}{" "}
+            NO staked
+          </p>
+          <ul>
+            {activePlan.entries.map((entry, index) => (
+              <li key={entry.pot}>
+                <a className="link" href={`#pot-${entry.pot}`}>
+                  {parseGroupTask(entry.task)?.task ?? `Friend ${index + 1}`}
+                </a>
+                <span
+                  className={`tag ${entry.joined ? "tag-green" : entry.created ? "tag-yellow" : ""}`}
+                >
+                  {entry.joined
+                    ? "Staked"
+                    : entry.created
+                      ? "Created"
+                      : "Pending"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {activePlan.signatures.length || activePlan.pending ? (
+            <div className="box-links">
+              {activePlan.signatures.map((signature, index) => (
+                <a
+                  className="link"
+                  key={signature}
+                  href={transactionUrl(signature)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Tx {index + 1} ↗
+                </a>
+              ))}
+              {activePlan.pending ? (
+                <a
+                  className="link"
+                  href={transactionUrl(activePlan.pending.signature)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Unresolved tx ↗
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      )}
+      {!complete ? (
+        <div className="box">
+          {rent !== null && stakeLamports !== null ? (
+            <>
+              <p className="cost-total">
+                <span>Your cost</span>
                 <strong>
+                  ≈{" "}
                   {formatSol(
                     BigInt(rent * count) +
                       stakeLamports * BigInt(count) +
                       estimatedFees,
                   )}{" "}
                   SOL
-                </strong>{" "}
-                total for {count} pots: {formatSol(BigInt(rent * count))}{" "}
-                account rent + {formatSol(stakeLamports * BigInt(count))} NO
-                stakes + up to {formatSol(estimatedFees)} estimated fees.
-                Confirmed costs are already paid when resuming.
+                </strong>
               </p>
-            ) : (
-              <p>
-                Rent estimate unavailable until the RPC responds and the stake
-                is valid. Funding is checked before setup.
+              <p className="cost-breakdown">
+                {formatSol(BigInt(rent * count))} rent +{" "}
+                {formatSol(stakeLamports * BigInt(count))} NO stakes + ≤{" "}
+                {formatSol(estimatedFees)} fees
+                {activePlan ? " · includes confirmed steps" : ""}
               </p>
-            )}
-            <p>
-              Creates are packed into as few transactions as fit, followed by
-              your NO stakes. Approve each batch once. Friends each make one
-              separate YES join.
-            </p>
-            <p>
-              Until friends join YES, these pots have no opposing side. A
-              not-completed verdict on an unopposed pot forfeits its stakes to
-              the judge; disclose this to your group.
-            </p>
-          </div>
-        ) : null}
-        {storageError ? (
-          <>
-            <p className="field-error" role="alert">
-              The saved group draft could not be read. Browser storage must be
-              available before setting up a group. Existing pots remain listed
-              below.
-            </p>
-            <button
-              className="text-button"
-              type="button"
-              disabled={pending}
-              onClick={startAnother}
-            >
-              Clear unreadable group draft
-            </button>
-          </>
-        ) : null}
-        {progress ? (
-          <p className="form-note" role="status">
-            {progress}
-          </p>
-        ) : null}
-        {!complete ? (
+            </>
+          ) : (
+            <p className="cost-breakdown">Cost estimate unavailable.</p>
+          )}
+        </div>
+      ) : null}
+      {storageError ? (
+        <p className="alert-text" role="alert">
+          Saved group draft is unreadable.{" "}
           <button
-            className="button button-primary"
-            type="submit"
-            disabled={
-              pending ||
-              loadedKey !== storageKey ||
-              storageError ||
-              (!!wallet && !programReady)
-            }
-          >
-            {pending
-              ? "Working…"
-              : activePlan
-                ? "Resume group setup"
-                : wallet
-                  ? `Create ${count} pots + stake NO`
-                  : "Connect to create group"}
-          </button>
-        ) : null}
-        {activePlan ? (
-          <button
-            className="button button-secondary"
-            type="button"
-            disabled={pending}
-            onClick={() => void copyGroupLink()}
-          >
-            Copy group link
-          </button>
-        ) : null}
-        {confirmLeave && unstakedPots > 0 ? (
-          <p className="risk-note" role="alert">
-            {unstakedPots === 1
-              ? "One created pot has no stake from you."
-              : `${unstakedPots} created pots have no stake from you.`}{" "}
-            A friend who joins YES there would be staking against a judge with
-            nothing at risk, and a “not completed” verdict on an unopposed pot
-            pays their stake to the judge. Resume instead to add your NO stakes.
-          </p>
-        ) : null}
-        {complete || (activePlan && !activePlan.pending) ? (
-          <button
-            className="text-button"
+            className="link-button"
             type="button"
             disabled={pending}
             onClick={startAnother}
           >
-            {complete
-              ? "Start another group"
-              : confirmLeave && unstakedPots > 0
-                ? "Leave them anyway"
-                : "Leave these pots and start another group"}
+            Clear draft
           </button>
-        ) : null}
-      </form>
-    </details>
+        </p>
+      ) : null}
+      {progress ? (
+        <p className="status-text" role="status">
+          {progress}
+        </p>
+      ) : null}
+      {!complete ? (
+        <button
+          className="button button-yellow button-block"
+          type="submit"
+          disabled={
+            pending ||
+            loadedKey !== storageKey ||
+            storageError ||
+            (!!wallet && !programReady)
+          }
+        >
+          {pending
+            ? "Working…"
+            : activePlan
+              ? "Resume setup"
+              : `Create ${count} pots + stake NO`}
+        </button>
+      ) : null}
+      {activePlan ? (
+        <button
+          className="button button-block"
+          type="button"
+          disabled={pending}
+          onClick={() => void copyGroupLink()}
+        >
+          Copy group link
+        </button>
+      ) : null}
+      {confirmLeave && unstakedPots > 0 ? (
+        <p className="alert-text" role="alert">
+          {unstakedPots === 1
+            ? "1 created pot has"
+            : `${unstakedPots} created pots have`}{" "}
+          no NO stake from you. Friends joining YES could lose their stake to
+          the judge.
+        </p>
+      ) : null}
+      {complete || (activePlan && !activePlan.pending) ? (
+        <button
+          className="link-button"
+          type="button"
+          disabled={pending}
+          onClick={startAnother}
+        >
+          {complete
+            ? "Start new group"
+            : confirmLeave && unstakedPots > 0
+              ? "Leave anyway"
+              : "Discard and start new group"}
+        </button>
+      ) : null}
+    </form>
   );
 }

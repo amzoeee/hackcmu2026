@@ -34,9 +34,7 @@ export function WalletChooserProvider({ children }: { children: ReactNode }) {
     const { adapter } = wallet;
     const handleConnect = () => setVisible(false);
     const handleError = () =>
-      setConnectionError(
-        `Could not connect to ${adapter.name}. Approve the connection in your wallet, then try again.`,
-      );
+      setConnectionError(`Could not connect to ${adapter.name}.`);
     adapter.on("connect", handleConnect);
     adapter.on("error", handleError);
     return () => {
@@ -65,77 +63,73 @@ export function WalletChooserProvider({ children }: { children: ReactNode }) {
         onClose={() => setVisible(false)}
       >
         <div className="wallet-dialog-heading">
-          <h2 id={titleId}>Connect a wallet</h2>
+          <h2 id={titleId}>Connect wallet</h2>
           <button
             type="button"
-            className="wallet-dialog-close"
+            className="icon-button"
+            aria-label="Close"
             onClick={() => setVisible(false)}
           >
-            Close
+            ✕
           </button>
         </div>
-        <p id={descriptionId}>
-          {availableWallets.length
-            ? "Choose a wallet and approve the connection. Use devnet for this prototype."
-            : "No Solana wallet extension was detected in this browser."}
-        </p>
-        {connectionError && (
-          <p role="alert" style={{ color: "var(--danger)" }}>
-            {connectionError}
+        <div className="wallet-dialog-body">
+          <p id={descriptionId}>
+            {availableWallets.length
+              ? "Choose a wallet."
+              : "No wallet extension found."}
           </p>
-        )}
-        {connecting && <p role="status">Waiting for wallet approval…</p>}
-        {availableWallets.length ? (
-          <ul className="wallet-dialog-options">
-            {availableWallets.map(({ adapter }) => (
-              <li key={adapter.name}>
-                <button
-                  type="button"
-                  className="wallet-dialog-option"
-                  disabled={connecting}
-                  onClick={async () => {
-                    setConnectionError(null);
-                    if (wallet?.adapter.name === adapter.name) {
-                      try {
-                        // Selecting the same adapter is a no-op; explicitly retry.
-                        await connect();
-                        setVisible(false);
-                      } catch {
-                        setConnectionError(
-                          `Could not connect to ${adapter.name}. Approve the connection in your wallet, then try again.`,
-                        );
+          {connectionError && (
+            <p role="alert" className="alert-text">
+              {connectionError}
+            </p>
+          )}
+          {connecting && (
+            <p role="status" className="status-text">
+              Waiting for approval…
+            </p>
+          )}
+          {availableWallets.length ? (
+            <ul className="wallet-dialog-options">
+              {availableWallets.map(({ adapter }) => (
+                <li key={adapter.name}>
+                  <button
+                    type="button"
+                    className="button button-block"
+                    disabled={connecting}
+                    onClick={async () => {
+                      setConnectionError(null);
+                      if (wallet?.adapter.name === adapter.name) {
+                        try {
+                          // Selecting the same adapter is a no-op; explicitly retry.
+                          await connect();
+                          setVisible(false);
+                        } catch {
+                          setConnectionError(
+                            `Could not connect to ${adapter.name}.`,
+                          );
+                        }
+                      } else {
+                        // WalletProvider connects a newly selected adapter.
+                        select(adapter.name);
                       }
-                    } else {
-                      // WalletProvider connects a newly selected adapter.
-                      select(adapter.name);
-                    }
-                  }}
-                >
-                  {adapter.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <>
-            <p>Enable a Solana wallet extension, then refresh this page.</p>
-            {demoAvailable && (
-              <p>
-                You can also select <strong>Start demo</strong> on this page to
-                use a browser wallet with test SOL.
-              </p>
-            )}
-          </>
-        )}
-        <button
-          type="button"
-          className="wallet-dialog-back"
-          onClick={() => setVisible(false)}
-        >
-          {demoAvailable
-            ? "Back to demo"
-            : "Back to Finance your Responsibilities"}
-        </button>
+                    }}
+                  >
+                    {adapter.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : demoAvailable ? (
+            <button
+              type="button"
+              className="button button-yellow button-block"
+              onClick={() => setVisible(false)}
+            >
+              Back to demo
+            </button>
+          ) : null}
+        </div>
       </dialog>
     </WalletModalContext.Provider>
   );
