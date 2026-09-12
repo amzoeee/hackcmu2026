@@ -1138,9 +1138,10 @@ export function FinanceYourResponsibilitiesApp({
                 Math.floor(now / 1000);
               const refundAt =
                 Number(asBigInt(pot.deadline)) + SETTLEMENT_GRACE_SECONDS;
-              const refundAvailable =
+              // One hand-off instant, allowing for a trailing chain clock, so the
+              // judge keeps their whole on-chain window and no state is dead.
+              const judgeWindowExpired =
                 refundAt + CLOCK_DRIFT_SECONDS <= Math.floor(now / 1000);
-              const judgeWindowExpired = refundAt <= Math.floor(now / 1000);
               const isJudge = address === pot.judge.toBase58();
               const participantCount =
                 pot.yesParticipants.length + pot.noParticipants.length;
@@ -1473,18 +1474,12 @@ export function FinanceYourResponsibilitiesApp({
                       <button
                         className="button button-primary"
                         type="button"
-                        disabled={
-                          pending !== null ||
-                          programReady !== true ||
-                          !refundAvailable
-                        }
+                        disabled={pending !== null || programReady !== true}
                         onClick={() => void refundPot(pot)}
                       >
                         {pending === `refund-${pot.publicKey.toBase58()}`
                           ? "Refunding…"
-                          : !refundAvailable
-                            ? "Waiting for chain clock…"
-                            : "Refund all stakes"}
+                          : "Refund all stakes"}
                       </button>
                     </div>
                   ) : null}
