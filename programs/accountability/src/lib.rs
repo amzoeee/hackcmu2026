@@ -100,8 +100,8 @@ pub mod accountability {
             require_keys_eq!(recipient_account.key(), *recipient, AccountabilityError::InvalidPayoutRecipient);
         }
 
-        // The program account's rent reserve is never distributed. Any indivisible dust remains too.
-        let rent_reserve = Rent::get()?.minimum_balance(Pot::SPACE);
+        // Preserve rent for the actual allocation, including older larger pots, plus division dust.
+        let rent_reserve = Rent::get()?.minimum_balance(pot.to_account_info().data_len());
         let available = pot.to_account_info().lamports().saturating_sub(rent_reserve);
         if !recipients.is_empty() && available > 0 {
             let payout = available / recipients.len() as u64;
@@ -168,8 +168,9 @@ pub struct Pot {
 }
 
 impl Pot {
+    // Both vector length prefixes are stored, but their combined capacity is ten wallets.
     pub const SPACE: usize = 8 + 32 + 32 + 8 + 4 + MAX_TASK_LENGTH + 8 + 8 + 8
-        + 4 + (32 * MAX_PARTICIPANTS) + 4 + (32 * MAX_PARTICIPANTS) + 1 + 2;
+        + 4 + 4 + (32 * MAX_PARTICIPANTS) + 1 + 2;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]

@@ -239,44 +239,61 @@ describe("accountability pots", () => {
     await rejectsProgramError(join(pot, creator, "yes"), "PotSettled");
   });
 
-  it("rejects more than ten participants and refunds all ten including the judge", async () => {
-    const judge = Keypair.generate();
-    const participants = [
-      judge,
-      ...Array.from({ length: 10 }, () => Keypair.generate()),
-    ];
-    await Promise.all([
-      fund(judge, 3 * LAMPORTS_PER_SOL),
-      ...participants.slice(1).map((wallet) => fund(wallet)),
-    ]);
-    const { pot, deadline } = await createPot(judge, judge.publicKey, 12);
-    const rentReserve = await provider.connection.getBalance(pot);
-
-    for (const participant of participants.slice(0, 10)) {
-      await join(pot, participant, "no");
-    }
-    await rejectsProgramError(join(pot, participants[10], "yes"), "PotFull");
-    const account = await program.account.pot.fetch(pot);
-    assert.equal(
-      account.yesParticipants.length + account.noParticipants.length,
-      10,
-    );
-    const recipients = participants
-      .slice(0, 10)
-      .map((wallet) => wallet.publicKey);
-    const beforeRefunds = await Promise.all(
-      recipients.map((wallet) => provider.connection.getBalance(wallet)),
-    );
-    await waitForDeadline(deadline);
-    await settle(pot, judge, true, recipients);
-    for (const [index, wallet] of recipients.entries()) {
+  for (const side of ["yes", "no"] as const) {
+    it(`fits ten ${side.toUpperCase()} participants and a maximum-length task, rejects an eleventh, and refunds everyone`, async () => {
+      const judge = Keypair.generate();
+      const participants = [
+        judge,
+        ...Array.from({ length: 10 }, () => Keypair.generate()),
+      ];
+      await Promise.all([
+        fund(judge, 3 * LAMPORTS_PER_SOL),
+        ...participants.slice(1).map((wallet) => fund(wallet)),
+      ]);
+      const { pot, deadline } = await createPot(judge, judge.publicKey, 12, {
+        task: "🙂".repeat(40),
+      });
+      const rentReserve = await provider.connection.getBalance(pot);
+      const accountInfo = await provider.connection.getAccountInfo(pot);
+      assert.equal(accountInfo?.data.length, 599);
       assert.equal(
-        await provider.connection.getBalance(wallet),
-        beforeRefunds[index] + STAKE,
+        rentReserve,
+        await provider.connection.getMinimumBalanceForRentExemption(599),
       );
-    }
-    assert.equal(await provider.connection.getBalance(pot), rentReserve);
-  });
+
+      for (const participant of participants.slice(0, 10)) {
+        await join(pot, participant, side);
+      }
+      await rejectsProgramError(join(pot, participants[10], "yes"), "PotFull");
+      const account = await program.account.pot.fetch(pot);
+      assert.equal(
+        account.yesParticipants.length + account.noParticipants.length,
+        10,
+      );
+      const recipients = participants
+        .slice(0, 10)
+        .map((wallet) => wallet.publicKey);
+      const beforeRefunds = await Promise.all(
+        recipients.map((wallet) => provider.connection.getBalance(wallet)),
+      );
+      await waitForDeadline(deadline);
+      await settle(pot, judge, side === "no", recipients);
+      const settled = await program.account.pot.fetch(pot);
+      assert.equal(settled.settled, true);
+      assert.equal(settled.outcome, side === "no");
+      assert.equal(
+        (await program.coder.accounts.encode("pot", settled)).length,
+        599,
+      );
+      for (const [index, wallet] of recipients.entries()) {
+        assert.equal(
+          await provider.connection.getBalance(wallet),
+          beforeRefunds[index] + STAKE,
+        );
+      }
+      assert.equal(await provider.connection.getBalance(pot), rentReserve);
+    });
+  }
 
   it("does not record or charge a participant whose stake transfer fails", async () => {
     const judge = Keypair.generate();
@@ -298,18 +315,21 @@ describe("accountability pots", () => {
     assert.equal(account.noParticipants.length, 0);
   });
 
-  it("pays a populated NO side and leaves rent plus division dust", async () => {
+  it("fits ten mixed participants and pays the NO side while preserving exact rent and division dust", async () => {
     const judge = Keypair.generate();
-    const yes = Keypair.generate();
+    const yesParticipants = Array.from({ length: 7 }, () => Keypair.generate());
     const noWinners = Array.from({ length: 3 }, () => Keypair.generate());
     await Promise.all([
       fund(judge, 3 * LAMPORTS_PER_SOL),
-      fund(yes),
+      ...yesParticipants.map((wallet) => fund(wallet)),
       ...noWinners.map((wallet) => fund(wallet)),
     ]);
-    const { pot, deadline } = await createPot(judge, judge.publicKey);
+    const { pot, deadline } = await createPot(judge, judge.publicKey, 12, {
+      task: "x".repeat(160),
+    });
     const rentReserve = await provider.connection.getBalance(pot);
-    await join(pot, yes, "yes");
+    for (const participant of yesParticipants)
+      await join(pot, participant, "yes");
     for (const winner of noWinners) await join(pot, winner, "no");
 
     const winnerBalances = await Promise.all(
@@ -317,7 +337,11 @@ describe("accountability pots", () => {
         provider.connection.getBalance(wallet.publicKey),
       ),
     );
-    const loserBalance = await provider.connection.getBalance(yes.publicKey);
+    const loserBalances = await Promise.all(
+      yesParticipants.map((wallet) =>
+        provider.connection.getBalance(wallet.publicKey),
+      ),
+    );
     await waitForDeadline(deadline);
     await settle(
       pot,
@@ -326,20 +350,30 @@ describe("accountability pots", () => {
       noWinners.map((wallet) => wallet.publicKey),
     );
 
-    const payout = Math.floor((STAKE * 4) / noWinners.length);
+    const payout = Math.floor((STAKE * 10) / noWinners.length);
     for (const [index, winner] of noWinners.entries()) {
       assert.equal(
         await provider.connection.getBalance(winner.publicKey),
         winnerBalances[index] + payout,
       );
     }
+    for (const [index, loser] of yesParticipants.entries()) {
+      assert.equal(
+        await provider.connection.getBalance(loser.publicKey),
+        loserBalances[index],
+      );
+    }
+    const settled = await program.account.pot.fetch(pot);
+    assert.equal(settled.yesParticipants.length, 7);
+    assert.equal(settled.noParticipants.length, 3);
+    assert.equal(settled.outcome, false);
     assert.equal(
-      await provider.connection.getBalance(yes.publicKey),
-      loserBalance,
+      (await program.coder.accounts.encode("pot", settled)).length,
+      599,
     );
     assert.equal(
       await provider.connection.getBalance(pot),
-      rentReserve + ((STAKE * 4) % noWinners.length),
+      rentReserve + ((STAKE * 10) % noWinners.length),
     );
   });
 
