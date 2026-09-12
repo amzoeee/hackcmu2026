@@ -697,3 +697,64 @@ textarea:focus {
   font-size: 14px;
   font-weight: 600;
 }
+
+.risk-note {
+  margin: 0;
+  border-left: 2px solid var(--line);
+  padding-left: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.group-challenge {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.group-challenge > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--accent);
+}
+.group-challenge > .create-form {
+  margin-top: 24px;
+}
+.group-friend {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.group-friend legend {
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 650;
+}
+.group-progress,
+.group-cost {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.group-progress {
+  margin-top: 16px;
+}
+.group-progress a {
+  color: var(--accent);
+}
+.group-progress li + li {
+  margin-top: 12px;
+}
+.group-note,
+.group-filter {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.group-note .text-button {
+  font-size: inherit;
+}

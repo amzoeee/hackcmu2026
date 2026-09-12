@@ -1,13 +1,8 @@
 "use client";
 
-import { BN } from "@coral-xyz/anchor";
+import { BN, Program } from "@coral-xyz/anchor";
 import type { AnchorWallet } from "@solana/wallet-adapter-react";
-import {
-  LAMPORTS_PER_SOL,
-  PublicKey,
-  SystemProgram,
-  type Connection,
-} from "@solana/web3.js";
+import { PublicKey, SystemProgram, type Connection } from "@solana/web3.js";
 import {
   FormEvent,
   useCallback,
@@ -27,6 +22,16 @@ import {
   SOLANA_NETWORK,
   SOLANA_RPC_URL,
 } from "@/lib/solana";
+
+import {
+  asBigInt,
+  formatSol,
+  parseSol,
+  deadlineFromNow,
+} from "@/lib/pot-values";
+
+import { GroupChallengeForm } from "./group-challenge-form";
+import { parseGroupTask } from "@/lib/group-challenge";
 
 type PotAccount = {
   creator: PublicKey;
@@ -56,64 +61,17 @@ type FinanceYourResponsibilitiesAppProps = {
   walletLabel: string;
 };
 
-const ONE_SOL = BigInt(LAMPORTS_PER_SOL);
 // These mirror MAX_PARTICIPANTS and MAX_TASK_LENGTH in the Anchor program.
 const MAX_PARTICIPANTS = 10;
 const MAX_TASK_BYTES = 160;
+// Must match SETTLEMENT_GRACE_SECONDS in the program.
+const SETTLEMENT_GRACE_SECONDS = 300;
 // The program compares against the cluster Clock, which can trail wall time by
 // a few slots. Hold joins open and settlement back until the chain has caught up.
 const CLOCK_DRIFT_SECONDS = 10;
 
-function asBigInt(value: BN | bigint | number) {
-  return typeof value === "bigint"
-    ? value
-    : typeof value === "number"
-      ? BigInt(value)
-      : BigInt(value.toString());
-}
-
 function shorten(address: string) {
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
-}
-
-function formatSol(lamports: BN | bigint | number) {
-  const amount = asBigInt(lamports);
-  const whole = amount / ONE_SOL;
-  const remainder = amount % ONE_SOL;
-  const formatter = new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 9,
-  });
-  const fraction = formatter
-    .formatToParts(
-      Number(remainder < 0n ? -remainder : remainder) / LAMPORTS_PER_SOL,
-    )
-    .filter(({ type }) => type === "decimal" || type === "fraction")
-    .map(({ value }) => value)
-    .join("");
-  return `${formatter.format(amount < 0n && whole === 0n ? -0 : whole)}${fraction}`;
-}
-
-function parseSol(value: string) {
-  if (!/^(?:\d+(?:\.\d{0,9})?|\.\d{1,9})$/.test(value.trim())) {
-    throw new Error(
-      "Enter a SOL amount using a decimal point and up to 9 decimal places.",
-    );
-  }
-  const [whole, fraction = ""] = value.trim().split(".");
-  const lamports =
-    BigInt(whole) * ONE_SOL + BigInt((fraction + "000000000").slice(0, 9));
-  if (lamports <= 0n) throw new Error("Stake must be greater than zero.");
-  if (lamports > 18_446_744_073_709_551_615n) {
-    throw new Error("This stake is too large. Enter a smaller SOL amount.");
-  }
-  return lamports;
-}
-
-function deadlineFromNow(minutes: number) {
-  const date = new Date(Date.now() + minutes * 60_000);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 19);
 }
 
 function explorerUrl(kind: "tx" | "address", value: string) {
@@ -234,6 +192,7 @@ export function FinanceYourResponsibilitiesApp({
   const [filter, setFilter] = useState<"all" | "active" | "settled" | "mine">(
     "all",
   );
+  const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [sharedPot, setSharedPot] = useState<{
     address: string;
     url: string;
@@ -258,6 +217,17 @@ export function FinanceYourResponsibilitiesApp({
   );
 
   useEffect(() => {
+    const loadGroup = () =>
+      setGroupFilter(new URLSearchParams(window.location.search).get("group"));
+    const initial = window.setTimeout(loadGroup, 0);
+    window.addEventListener("popstate", loadGroup);
+    return () => {
+      window.clearTimeout(initial);
+      window.removeEventListener("popstate", loadGroup);
+    };
+  }, []);
+
+  useEffect(() => {
     if (error) errorMessage.current?.scrollIntoView({ block: "center" });
   }, [error]);
 
@@ -273,7 +243,10 @@ export function FinanceYourResponsibilitiesApp({
     };
     const onHashChange = () => {
       lastLinkedPot.current = null;
-      if (window.location.hash.startsWith("#pot-")) setFilter("all");
+      if (window.location.hash.startsWith("#pot-")) {
+        setFilter("all");
+        setGroupFilter(null);
+      }
       scrollToPot();
     };
     scrollToPot();
@@ -294,13 +267,17 @@ export function FinanceYourResponsibilitiesApp({
             "Use Solana devnet or the local rehearsal to open this prototype.",
           );
         }
-        const [programAccount, accounts, genesis] = await Promise.all([
-          readConnection.getAccountInfo(readProgram.programId, "confirmed"),
-          readProgram.account.pot.all(),
-          SOLANA_NETWORK === "devnet"
-            ? readConnection.getGenesisHash()
-            : Promise.resolve(null),
-        ]);
+        const [programAccount, accounts, genesis, deployedIdl] =
+          await Promise.all([
+            readConnection.getAccountInfo(readProgram.programId, "confirmed"),
+            readProgram.account.pot.all(),
+            SOLANA_NETWORK === "devnet"
+              ? readConnection.getGenesisHash()
+              : Promise.resolve(null),
+            SOLANA_NETWORK === "devnet"
+              ? Program.fetchIdl(readProgram.programId, readProgram.provider)
+              : Promise.resolve(null),
+          ]);
         if (request !== potRequest.current) return;
         if (SOLANA_NETWORK === "devnet" && genesis !== DEVNET_GENESIS) {
           setProgramReady(null);
@@ -309,8 +286,24 @@ export function FinanceYourResponsibilitiesApp({
             "The configured connection is not Solana devnet. Ask the host to correct the RPC setting.",
           );
         }
-        setProgramReady(Boolean(programAccount?.executable));
-        setLoadError(null);
+        const compatible =
+          IS_LOCALNET ||
+          Boolean(
+            deployedIdl?.instructions.some(
+              (instruction) => instruction.name === "refund_pot",
+            ) &&
+            deployedIdl.constants?.some(
+              (constant) =>
+                constant.name === "SETTLEMENT_GRACE_SECONDS" &&
+                Number(constant.value) === SETTLEMENT_GRACE_SECONDS,
+            ),
+          );
+        setProgramReady(Boolean(programAccount?.executable) && compatible);
+        setLoadError(
+          programAccount?.executable && !compatible
+            ? "The deployed program needs the settlement recovery upgrade. Ask the host to deploy the current program and IDL before staking or settling."
+            : null,
+        );
         setPots(
           accounts
             .map(({ publicKey, account }) => ({ ...account, publicKey }))
@@ -605,10 +598,17 @@ export function FinanceYourResponsibilitiesApp({
     setSignature(null);
     try {
       const winners = completed ? pot.yesParticipants : pot.noParticipants;
+      const everyone = [...pot.yesParticipants, ...pot.noParticipants];
+      const unopposed =
+        !pot.yesParticipants.length || !pot.noParticipants.length;
       const recipients =
-        winners.length > 0
-          ? winners
-          : [...pot.yesParticipants, ...pot.noParticipants];
+        everyone.length === 0
+          ? []
+          : unopposed
+            ? completed
+              ? everyone
+              : [pot.judge]
+            : winners;
       setPending(`settle-${pot.publicKey.toBase58()}`);
       const txSignature = await program.methods
         .settlePot(completed)
@@ -625,8 +625,10 @@ export function FinanceYourResponsibilitiesApp({
       const payout =
         recipients.length === 0
           ? "The empty pot is settled."
-          : winners.length === 0
-            ? "No one chose this side, so every participant received a refund."
+          : unopposed
+            ? completed
+              ? "Every participant received their original stake back."
+              : "The unopposed staked pool was forfeited to the named judge."
             : `${winners.length} ${winners.length === 1 ? "winner has" : "winners have"} been paid.`;
       afterTransaction(`${outcome}. ${payout}`, txSignature);
       setSettlement(null);
@@ -637,13 +639,50 @@ export function FinanceYourResponsibilitiesApp({
     }
   }
 
+  async function refundPot(pot: Pot) {
+    if (!wallet) return connect();
+    setError(null);
+    setNotice(null);
+    setSignature(null);
+    setPending(`refund-${pot.publicKey.toBase58()}`);
+    try {
+      const txSignature = await program.methods
+        .refundPot()
+        .accounts({ caller: wallet.publicKey, pot: pot.publicKey })
+        .remainingAccounts(
+          [...pot.yesParticipants, ...pot.noParticipants].map((pubkey) => ({
+            pubkey,
+            isSigner: false,
+            isWritable: true,
+          })),
+        )
+        .rpc();
+      setSettlement(null);
+      afterTransaction(
+        "Judge window expired. Every participant received their exact stake back; the pot is settled without a verdict.",
+        txSignature,
+      );
+    } catch (refundError) {
+      showTransactionError(refundError);
+    } finally {
+      setPending(null);
+    }
+  }
+
   const taskBytes = new TextEncoder().encode(task.trim()).length;
 
   const visiblePots = pots.filter((pot) => {
+    const group = parseGroupTask(pot.task);
+    if (
+      groupFilter &&
+      `${pot.creator.toBase58()}:${group?.groupId}` !== groupFilter
+    )
+      return false;
     if (filter === "active") return !pot.settled;
     if (filter === "settled") return pot.settled;
     if (filter === "mine")
       return (
+        address === group?.participant ||
         address === pot.creator.toBase58() ||
         address === pot.judge.toBase58() ||
         [...pot.yesParticipants, ...pot.noParticipants].some(
@@ -895,7 +934,8 @@ export function FinanceYourResponsibilitiesApp({
                 spellCheck={false}
               />
               <span className="field-note">
-                Choose someone your group trusts. Only this wallet can settle.
+                Choose someone your group trusts. This wallet has five minutes
+                after the deadline to give a verdict.
               </span>
             </label>
             <button
@@ -916,6 +956,12 @@ export function FinanceYourResponsibilitiesApp({
               Creating pays account rent and a small network fee. You choose a
               side and add your stake separately.
             </p>
+            <p className="risk-note">
+              No opposing side means no competing stake to win. If the pot stays
+              unopposed, “completed” returns each stake; “not completed”
+              forfeits the staked pool to the judge. A judge who also stakes can
+              receive their own stake back. Choose a trusted judge.
+            </p>
             <details className="pot-rules">
               <summary>Staking and payout rules</summary>
               <p>
@@ -924,13 +970,31 @@ export function FinanceYourResponsibilitiesApp({
                 pot.
               </p>
               <p>
-                Only the named judge can settle after the deadline. Winners
-                split the pool equally. If no one chose the winning side,
-                everyone gets their stake back. Network fees and account rent
-                are separate from the pool.
+                With both sides present, winners split the pool equally. The
+                judge has five minutes after the deadline to settle. After that,
+                anyone can refund all original stakes, without a verdict.
+                Network fees, account rent, and unsolicited extra SOL are not
+                refunded.
               </p>
             </details>
           </form>
+          <GroupChallengeForm
+            connection={connection}
+            wallet={wallet}
+            pending={pending !== null}
+            onPendingChange={(active) => {
+              setPending(active ? "group" : null);
+              if (active) {
+                setError(null);
+                setNotice(null);
+                setSignature(null);
+              }
+            }}
+            onConnect={connect}
+            onResult={afterTransaction}
+            onError={showTransactionError}
+            programReady={programReady === true}
+          />
         </section>
 
         <section className="pots-column" aria-labelledby="pots-heading">
@@ -989,6 +1053,23 @@ export function FinanceYourResponsibilitiesApp({
               ) : null}
             </div>
           ) : null}
+          {groupFilter ? (
+            <p className="group-filter">
+              Group {groupFilter.split(":").at(-1)} · {visiblePots.length} pots{" "}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setGroupFilter(null);
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("group");
+                  window.history.replaceState(null, "", url);
+                }}
+              >
+                Show all groups
+              </button>
+            </p>
+          ) : null}
           {loadError ? (
             <div className="message message-error" role="alert">
               {loadError}
@@ -998,8 +1079,8 @@ export function FinanceYourResponsibilitiesApp({
             <div className="empty-state">
               <h3>Getting {SOLANA_NETWORK} ready</h3>
               <p>
-                The host still needs to deploy the program. You can connect your
-                wallet now; pots will appear here when setup is complete.
+                The host needs to deploy the current program and IDL. You can
+                connect your wallet and view records while setup is completed.
               </p>
             </div>
           ) : null}
@@ -1031,6 +1112,8 @@ export function FinanceYourResponsibilitiesApp({
           ) : null}
           <div className="pot-list">
             {visiblePots.map((pot) => {
+              const group = parseGroupTask(pot.task);
+              const displayTask = group?.task ?? pot.task;
               const joinedYes = address
                 ? pot.yesParticipants.some(
                     (person) => person.toBase58() === address,
@@ -1045,9 +1128,20 @@ export function FinanceYourResponsibilitiesApp({
               const deadlinePassed =
                 Number(asBigInt(pot.deadline)) + CLOCK_DRIFT_SECONDS <=
                 Math.floor(now / 1000);
+              const refundAt =
+                Number(asBigInt(pot.deadline)) + SETTLEMENT_GRACE_SECONDS;
+              const refundAvailable =
+                refundAt + CLOCK_DRIFT_SECONDS <= Math.floor(now / 1000);
+              const judgeWindowExpired = refundAt <= Math.floor(now / 1000);
               const isJudge = address === pot.judge.toBase58();
               const participantCount =
                 pot.yesParticipants.length + pot.noParticipants.length;
+              const unopposed =
+                participantCount > 0 &&
+                (!pot.yesParticipants.length || !pot.noParticipants.length);
+              const timedOut = pot.settled && pot.outcome === null;
+              const forfeited =
+                pot.settled && unopposed && pot.outcome === false;
               const settlementPending =
                 pending === `settle-${pot.publicKey.toBase58()}`;
               const pool = asBigInt(pot.stake) * BigInt(participantCount);
@@ -1058,17 +1152,25 @@ export function FinanceYourResponsibilitiesApp({
                 ? pool / BigInt(winners.length)
                 : 0n;
               const refunded =
-                pot.settled && participantCount > 0 && winners.length === 0;
+                pot.settled &&
+                (timedOut || (unopposed && pot.outcome === true));
               const won = pot.settled && (pot.outcome ? joinedYes : joinedNo);
               const confirming =
                 !pot.settled &&
                 settlement?.pot === pot.publicKey.toBase58() &&
-                isJudge;
+                isJudge &&
+                !judgeWindowExpired;
               const selectedWinners = settlement?.completed
                 ? pot.yesParticipants
                 : pot.noParticipants;
               const reviewRecipients =
-                selectedWinners.length || participantCount;
+                participantCount === 0
+                  ? 0
+                  : unopposed
+                    ? settlement?.completed
+                      ? participantCount
+                      : 1
+                    : selectedWinners.length;
               const reviewPayout = reviewRecipients
                 ? pool / BigInt(reviewRecipients)
                 : 0n;
@@ -1078,27 +1180,63 @@ export function FinanceYourResponsibilitiesApp({
                   key={pot.publicKey.toBase58()}
                   id={`pot-${pot.publicKey.toBase58()}`}
                   tabIndex={-1}
-                  aria-label={pot.task}
+                  aria-label={displayTask}
                 >
                   <div className="pot-main">
                     <div className="pot-title-line">
-                      <h3>{pot.task}</h3>
+                      <h3>{displayTask}</h3>
                       <span
                         className={
                           pot.settled ? "status status-settled" : "status"
                         }
                       >
                         {pot.settled
-                          ? pot.outcome
-                            ? "Completed"
-                            : "Not completed"
-                          : deadlinePassed
-                            ? "Awaiting judge"
-                            : participantCount === MAX_PARTICIPANTS
-                              ? "Full"
-                              : "Open"}
+                          ? timedOut
+                            ? "Refunded · timed out"
+                            : pot.outcome
+                              ? "Completed"
+                              : "Not completed"
+                          : judgeWindowExpired
+                            ? "Refund available"
+                            : deadlinePassed
+                              ? "Awaiting judge"
+                              : participantCount === MAX_PARTICIPANTS
+                                ? "Full"
+                                : "Open"}
                       </span>
                     </div>
+                    {group ? (
+                      <p className="group-note">
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() => {
+                            setGroupFilter(
+                              `${pot.creator.toBase58()}:${group.groupId}`,
+                            );
+                            setFilter("all");
+                          }}
+                        >
+                          Group {group.groupId}
+                        </button>{" "}
+                        · Task for{" "}
+                        {group.participant === address
+                          ? "you"
+                          : shorten(group.participant)}
+                        .
+                        {!pot.settled &&
+                        !pot.yesParticipants.some(
+                          (person) => person.toBase58() === group.participant,
+                        )
+                          ? " The named friend still needs to join YES."
+                          : ""}
+                      </p>
+                    ) : null}
+                    {unopposed && !pot.settled ? (
+                      <p>
+                        <span className="status">Unopposed</span>
+                      </p>
+                    ) : null}
                     <dl className="pot-details">
                       <div>
                         <dt>Stake</dt>
@@ -1118,6 +1256,16 @@ export function FinanceYourResponsibilitiesApp({
                           {formatDeadline(pot.deadline)}
                         </dd>
                       </div>
+                      {!pot.settled ? (
+                        <div>
+                          <dt>Refunds unlock</dt>
+                          <dd
+                            title={new Date(refundAt * 1000).toLocaleString()}
+                          >
+                            {formatDeadline(refundAt)}
+                          </dd>
+                        </div>
+                      ) : null}
                       <div>
                         <dt>Judge</dt>
                         <dd title={pot.judge.toBase58()}>
@@ -1144,9 +1292,13 @@ export function FinanceYourResponsibilitiesApp({
                       <p className="time-note">
                         {participantCount === 0
                           ? "Empty pot settled. No SOL to distribute."
-                          : refunded
-                            ? `${participantCount === 1 ? "The only participant was" : `All ${participantCount} participants were`} refunded because no one chose the winning side.`
-                            : `Pool paid to ${winners.length} ${pot.outcome ? "YES" : "NO"} ${winners.length === 1 ? "participant" : "participants"}.`}
+                          : timedOut
+                            ? "The judge window expired. All original stakes were refunded without a verdict."
+                            : refunded
+                              ? "The unopposed task was completed. All original stakes were refunded."
+                              : forfeited
+                                ? "Unopposed pot settled as not completed. View the on-chain history for the payout."
+                                : `Pool paid to ${winners.length} ${pot.outcome ? "YES" : "NO"} ${winners.length === 1 ? "participant" : "participants"}.`}
                       </p>
                     )}
                     {joined ? (
@@ -1157,13 +1309,24 @@ export function FinanceYourResponsibilitiesApp({
                         {pot.settled
                           ? refunded
                             ? `Your ${formatSol(pot.stake)} SOL stake was refunded.`
-                            : won
-                              ? `Your ${joinedYes ? "YES" : "NO"} side won. Your share of the staked pool was ${formatSol(winnerPayout)} SOL, including your stake.`
-                              : `You chose ${joinedYes ? "YES" : "NO"}. Your stake went to the winning side.`
+                            : forfeited
+                              ? `You staked ${formatSol(pot.stake)} SOL on ${joinedYes ? "YES" : "NO"}. This unopposed pot is settled.`
+                              : won
+                                ? `Your ${joinedYes ? "YES" : "NO"} side won. Your share of the staked pool was ${formatSol(winnerPayout)} SOL, including your stake.`
+                                : `You chose ${joinedYes ? "YES" : "NO"}. Your stake went to the winning side.`
                           : `You staked ${formatSol(pot.stake)} SOL on ${joinedYes ? "YES" : "NO"}.`}
                       </p>
                     ) : null}
                   </div>
+                  {!pot.settled && (unopposed || participantCount === 0) ? (
+                    <p className="risk-note">
+                      No opposing side yet. If this pot stays unopposed,
+                      “completed” refunds stakes and “not completed” pays the
+                      entire staked pool to the judge. You can lose your stake
+                      even on NO. A judge staking here can receive their own
+                      stake back.
+                    </p>
+                  ) : null}
                   {!pot.settled && !deadlinePassed && !joined ? (
                     <div className="pot-actions">
                       <span className="side-count">
@@ -1203,7 +1366,10 @@ export function FinanceYourResponsibilitiesApp({
                       </div>
                     </div>
                   ) : null}
-                  {!pot.settled && deadlinePassed && isJudge ? (
+                  {!pot.settled &&
+                  deadlinePassed &&
+                  isJudge &&
+                  !judgeWindowExpired ? (
                     <div className="pot-actions settlement-actions">
                       <span className="side-count">
                         You are the judge. Was the task completed?
@@ -1253,8 +1419,10 @@ export function FinanceYourResponsibilitiesApp({
                       <p>
                         {participantCount === 0
                           ? "This pot is empty. It will settle without a payout."
-                          : selectedWinners.length === 0
-                            ? `No one chose ${settlement.completed ? "YES" : "NO"}. Each participant will receive ${formatSol(reviewPayout)} SOL from the staked pool, refunding their original stake.`
+                          : unopposed
+                            ? settlement.completed
+                              ? `This pot is unopposed. Each participant receives their original ${formatSol(pot.stake)} SOL stake.`
+                              : `This pot is unopposed. The entire ${formatSol(pool)} SOL staked pool goes to the judge (${shorten(pot.judge.toBase58())}), including any stake the judge contributed.`
                             : selectedWinners.length === 1
                               ? `The ${settlement.completed ? "YES" : "NO"} participant will receive ${formatSol(reviewPayout)} SOL from the staked pool, including their original stake.`
                               : `Each of the ${selectedWinners.length} ${settlement.completed ? "YES" : "NO"} participants will receive ${formatSol(reviewPayout)} SOL from the staked pool, including their original stake.`}{" "}
@@ -1287,9 +1455,39 @@ export function FinanceYourResponsibilitiesApp({
                       </div>
                     </div>
                   ) : null}
-                  {!pot.settled && deadlinePassed && !isJudge ? (
+                  {!pot.settled && judgeWindowExpired ? (
+                    <div className="pot-actions settlement-actions">
+                      <p className="waiting-note">
+                        The judge window has ended. Anyone can return every
+                        original stake; no verdict will be recorded. Rent and
+                        extra SOL remain in the pot.
+                      </p>
+                      <button
+                        className="button button-primary"
+                        type="button"
+                        disabled={
+                          pending !== null ||
+                          programReady !== true ||
+                          !refundAvailable
+                        }
+                        onClick={() => void refundPot(pot)}
+                      >
+                        {pending === `refund-${pot.publicKey.toBase58()}`
+                          ? "Refunding…"
+                          : !refundAvailable
+                            ? "Waiting for chain clock…"
+                            : "Refund all stakes"}
+                      </button>
+                    </div>
+                  ) : null}
+                  {!pot.settled &&
+                  deadlinePassed &&
+                  !isJudge &&
+                  !judgeWindowExpired ? (
                     <p className="waiting-note">
-                      Joining is closed. Waiting for the named judge to settle.
+                      Joining is closed. The judge can settle until{" "}
+                      {formatDeadline(refundAt)}. After that, anyone can refund
+                      all stakes.
                     </p>
                   ) : null}
                   <details className="participants">

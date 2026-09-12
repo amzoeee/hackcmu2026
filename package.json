@@ -25,7 +25,8 @@
     "anchor:build": "bash scripts/with-tools.sh bash scripts/build-program.sh",
     "anchor:test": "npm run anchor:build && node scripts/create-test-fixtures.mjs && npm run anchor -- test --skip-build --provider.cluster localnet",
     "anchor:deploy:devnet": "bash scripts/with-tools.sh bash scripts/deploy-devnet.sh",
-    "test": "npm run anchor:test",
+    "test": "npm run test:program-unit && npm run anchor:test",
+    "test:program-unit": "bash scripts/with-tools.sh cargo test -p accountability --lib",
     "test:anchor": "node --import tsx --test --test-timeout=120000 tests/program/*.test.ts",
     "test:offchain": "node --import tsx --test --test-timeout=90000 tests/*.test.ts"
   },
