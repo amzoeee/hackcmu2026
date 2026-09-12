@@ -47,13 +47,25 @@ The judge paid only the settlement fee, and the participant received the full st
 
 A controlled RPC proxy delayed reads by ten seconds, then stopped answering, then recovered. Browser checks confirmed that slow responses rendered despite the eight-second poll interval, stalled reads ended after fifteen seconds, the refresh control became available, and the last loaded pot stayed visible. Restoring the connection cleared the error. Separate form checks rejected a 164-byte emoji task, an invalid judge address, and a past deadline without moving SOL.
 
+Startup funding now completes before publishing a new wallet to the page. A fresh browser wallet showed **Starting…**, then its funded 0.25 SOL balance without the earlier stale-zero interval. A controlled funding failure still connected the wallet, displayed the original recovery message, and left **Add test SOL** available for another attempt.
+
 ## Production build
 
 The compiled production app also passed the full two-profile flow on localnet with fresh browser wallets. Both began with 0.25 SOL. After creation and a YES stake, A held 0.23493008 SOL; B held 0.239995 SOL after joining NO. A settled Completed and finished with 0.25492508 SOL, receiving the 0.02 SOL pool less the settlement fee. Both profiles displayed the settled result automatically, and neither browser reported console warnings or errors during the flow.
 
 Opening the production devnet page through the host's HTTP LAN address verified browser-wallet creation, restoration after reload, and the manual address-copy fallback when clipboard access was unavailable. This check used the same computer and a disabled test funder; a second physical device and the full devnet staking flow remain unverified.
 
-## Local ledger identifiers
+## Full-capacity browser rehearsal
+
+The production rehearsal also passed a ten-wallet pot with five YES and five NO participants. Two browser profiles and eight temporary loopback origins provided independent browser wallet storage; every wallet was created, funded, and joined through the interface. The task used the full 160-byte allowance.
+
+After ten 0.01 SOL stakes, every client showed **Full**, a 0.1 SOL pool, and the complete participant list. An eleventh visitor saw disabled join controls. The full task, expanded addresses, and share controls fit a 320px viewport without horizontal overflow.
+
+After the deadline, the judge reviewed and confirmed the five-winner payout. Each additional YES wallet moved from 0.239995 to 0.259995 SOL; each additional NO wallet remained at 0.239995 SOL. The judge's balance moved from 0.21986016 to 0.23985516 SOL, reflecting its 0.02 SOL payout less the settlement fee. All ten clients displayed the matching personal outcome automatically.
+
+Pot: `8aYL8hCsTWZyzyjqpoAkoHLbKfRFcB8918yk7ZjUE53T`. Settlement: `scUeSc7YFrHVP9277NcpT8TYqVEpDHTb8h4SzignJGsEJLimeBx1GCfSt1VnffN7TVU7QDGaVSgabNZ8ArPkMDF`.
+
+## Original local ledger identifiers
 
 - Wallet A: `4h7yKVVWgYqkLcGoGLzXSFmQVpyDBzh1LuZvfubgsjdX`
 - Wallet B: `8YFJwh2yL2YgG8ck8rfwJhqq6yVXoL85PGVU64boykjB`

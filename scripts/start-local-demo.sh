@@ -58,6 +58,7 @@ echo "Starting a fresh local Solana chain for UI rehearsal."
 echo "Program: $PROGRAM_ID"
 solana-test-validator \
   --ledger "$LEDGER_DIR" \
+  --limit-ledger-size 1000000 \
   --bind-address 127.0.0.1 \
   --rpc-port 18999 \
   --faucet-port 19900 \

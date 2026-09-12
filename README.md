@@ -30,6 +30,8 @@ For the compiled interface without development controls, use `npm run demo:local
 
 Open [http://localhost:3001](http://localhost:3001) in two separate browser profiles. The command starts an isolated local validator with the built program and a local-only web server. It uses its own build directory and does not change devnet environment settings. Press **Ctrl+C** to stop both processes and discard the temporary ledger; pots reset on the next run.
 
+The temporary ledger retains recent transaction history for reviewing payouts during a presentation.
+
 1. In each profile, click **Start demo**. Each wallet receives 0.25 local test SOL.
 2. In profile A, enter a task, use a 0.01 SOL stake and a short deadline, and leave the judge blank to judge it yourself. Create the pot.
 3. A joins **YES**. B joins **NO** on the same pot. Both balances decrease by the stake plus a small fee.
