@@ -116,6 +116,14 @@ function deadlineFromNow(minutes: number) {
   return local.toISOString().slice(0, 19);
 }
 
+function deadlineEndOfDay() {
+  const date = new Date();
+  date.setHours(23, 59, 59, 0);
+  if (date.getTime() <= Date.now()) date.setDate(date.getDate() + 1);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 19);
+}
+
 function explorerUrl(kind: "tx" | "address", value: string) {
   const cluster =
     SOLANA_NETWORK === "localnet"
@@ -124,28 +132,23 @@ function explorerUrl(kind: "tx" | "address", value: string) {
   return `https://explorer.solana.com/${kind}/${value}?cluster=${cluster}`;
 }
 
-function formatDeadline(deadline: BN | bigint | number) {
-  const date = new Date(Number(asBigInt(deadline)) * 1000);
-  if (!Number.isFinite(date.getTime())) return "Beyond calendar range";
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-}
-
 function timeRemaining(deadline: BN | bigint | number, now: number) {
   const seconds = Number(asBigInt(deadline)) - Math.floor(now / 1000);
   if (seconds <= 0) return "Deadline passed";
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  if (days > 0) return `${days}d ${hours % 24}h remaining`;
-  if (hours > 0) return `${hours}h ${minutes}m remaining`;
-  return minutes > 0
-    ? `${minutes}m ${seconds % 60}s remaining`
-    : `${seconds}s remaining`;
+  if (days > 0) return `${days}d ${hours % 24}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return minutes > 0 ? `${minutes}m ${seconds % 60}s left` : `${seconds}s left`;
+}
+
+function judgeInitial(address: string) {
+  return (
+    address
+      .split("")
+      .reduce((total, character) => total + character.charCodeAt(0), 0) % 26
+  );
 }
 
 function identifierSeed(identifier: BN) {
@@ -454,16 +457,20 @@ export function SolaraApp({
     }
   }
 
-  async function copyAddress() {
-    if (!address) return;
+  async function copyWalletAddress(walletAddress: string, label: string) {
     setSignature(null);
     try {
-      await navigator.clipboard.writeText(address);
-      setNotice("Wallet address copied.");
+      await navigator.clipboard.writeText(walletAddress);
+      setNotice(`${label} address copied.`);
     } catch {
       // Clipboard access requires HTTPS on LAN origins. Keep the address copyable.
-      setNotice(`Wallet address: ${address}`);
+      setNotice(`${label} address: ${walletAddress}`);
     }
+  }
+
+  async function copyAddress() {
+    if (!address) return;
+    await copyWalletAddress(address, "Wallet");
   }
 
   async function sharePot(pot: Pot) {
@@ -863,29 +870,29 @@ export function SolaraApp({
                 type="button"
                 className="text-button"
                 disabled={pending === "create"}
-                onClick={() => setDeadline(deadlineFromNow(2))}
-              >
-                2 minutes
-              </button>
-              <button
-                type="button"
-                className="text-button"
-                disabled={pending === "create"}
-                onClick={() => setDeadline(deadlineFromNow(5))}
-              >
-                5 minutes
-              </button>
-              <button
-                type="button"
-                className="text-button"
-                disabled={pending === "create"}
                 onClick={() => setDeadline(deadlineFromNow(60))}
               >
-                1 hour
+                1 hr
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                disabled={pending === "create"}
+                onClick={() => setDeadline(deadlineFromNow(240))}
+              >
+                4 hr
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                disabled={pending === "create"}
+                onClick={() => setDeadline(deadlineEndOfDay())}
+              >
+                End of Day
               </button>
             </div>
             <label>
-              Judge wallet
+              Who decides?
               <input
                 disabled={pending === "create"}
                 value={judge}
@@ -895,7 +902,7 @@ export function SolaraApp({
                 spellCheck={false}
               />
               <span className="field-note">
-                Choose someone your group trusts. Only this wallet can settle.
+                Pick someone your group trusts. Only they can settle this pot.
               </span>
             </label>
             <button
@@ -910,8 +917,13 @@ export function SolaraApp({
                 ? "Creating pot…"
                 : wallet
                   ? "Create pot"
-                  : "Connect to create"}
+                : "Create the pot"}
             </button>
+            {!wallet ? (
+            <p className="form-note">
+              You’ll connect a wallet when you press Create the pot.
+            </p>
+            ) : null}
             <p className="form-note">
               Creating pays account rent and a small network fee. You choose a
               side and add your stake separately.
@@ -1045,6 +1057,10 @@ export function SolaraApp({
               const deadlinePassed =
                 Number(asBigInt(pot.deadline)) + CLOCK_DRIFT_SECONDS <=
                 Math.floor(now / 1000);
+              const deadlineSeconds =
+                Number(asBigInt(pot.deadline)) - Math.floor(now / 1000);
+              const deadlineApproaching =
+                !pot.settled && deadlineSeconds > 0 && deadlineSeconds <= 3600;
               const isJudge = address === pot.judge.toBase58();
               const participantCount =
                 pot.yesParticipants.length + pot.noParticipants.length;
@@ -1072,6 +1088,14 @@ export function SolaraApp({
               const reviewPayout = reviewRecipients
                 ? pool / BigInt(reviewRecipients)
                 : 0n;
+              const yesPercent = participantCount
+                ? (pot.yesParticipants.length / participantCount) * 100
+                : 50;
+              const deadlineText = timeRemaining(pot.deadline, now);
+              const deadlineDate = new Date(
+                Number(asBigInt(pot.deadline)) * 1000,
+              );
+              const judgeAddress = pot.judge.toBase58();
               return (
                 <article
                   className={`pot-row ${pot.settled ? "pot-settled" : ""}`}
@@ -1084,9 +1108,7 @@ export function SolaraApp({
                     <div className="pot-title-line">
                       <h3>{pot.task}</h3>
                       <span
-                        className={
-                          pot.settled ? "status status-settled" : "status"
-                        }
+                        className={`status ${pot.settled ? "status-settled" : ""} ${deadlineApproaching ? "status-urgent" : ""}`}
                       >
                         {pot.settled
                           ? pot.outcome
@@ -1110,34 +1132,69 @@ export function SolaraApp({
                       </div>
                       <div>
                         <dt>Deadline</dt>
-                        <dd
-                          title={new Date(
-                            Number(asBigInt(pot.deadline)) * 1000,
-                          ).toLocaleString()}
-                        >
-                          {formatDeadline(pot.deadline)}
+                        <dd>
+                          <time
+                            className={deadlineApproaching ? "deadline-urgent" : ""}
+                            dateTime={deadlineDate.toISOString()}
+                            title={deadlineDate.toLocaleString()}
+                            aria-live="polite"
+                          >
+                            {deadlineText}
+                          </time>
                         </dd>
                       </div>
                       <div>
-                        <dt>Judge</dt>
-                        <dd title={pot.judge.toBase58()}>
-                          {isJudge ? "You" : shorten(pot.judge.toBase58())}
+                        <dt>Who decides?</dt>
+                        <dd className="judge-identity">
+                          <span className="judge-avatar" aria-hidden="true">
+                            {String.fromCharCode(65 + judgeInitial(judgeAddress))}
+                          </span>
+                          <span className="judge-name">
+                            {isJudge ? "You" : "Judge"}
+                            <button
+                              className="judge-address text-button"
+                              type="button"
+                              title={`Copy full judge address: ${judgeAddress}`}
+                              onClick={() =>
+                                void copyWalletAddress(judgeAddress, "Judge")
+                              }
+                            >
+                              {shorten(judgeAddress)}
+                            </button>
+                          </span>
                         </dd>
                       </div>
                     </dl>
-                    <div className="pot-sides">
-                      <span>
-                        <strong>YES {pot.yesParticipants.length}</strong> ·
-                        completed
+                    <div
+                      className="split-bar"
+                      role="img"
+                      aria-label={`Participant split: YES ${pot.yesParticipants.length}, NO ${pot.noParticipants.length}${pot.settled ? `. ${pot.outcome ? "YES" : "NO"} won.` : "."}`}
+                    >
+                      <span
+                        className={`split-segment split-yes ${pot.settled && !pot.outcome ? "split-loser" : ""}`}
+                        style={{ width: `${yesPercent}%` }}
+                      >
+                        YES {pot.yesParticipants.length}
+                        {pot.settled && pot.outcome ? " · won" : ""}
                       </span>
-                      <span>
-                        <strong>NO {pot.noParticipants.length}</strong> · not
-                        completed
+                      <span
+                        className={`split-segment split-no ${pot.settled && pot.outcome ? "split-loser" : ""}`}
+                        style={{ width: `${100 - yesPercent}%` }}
+                      >
+                        NO {pot.noParticipants.length}
+                        {pot.settled && !pot.outcome ? " · won" : ""}
                       </span>
+                    </div>
+                    <div className="split-legend" aria-hidden="true">
+                      <span>YES · completed</span>
+                      <span>NO · not completed</span>
                     </div>
                     {!pot.settled ? (
                       <p className="time-note">
-                        {timeRemaining(pot.deadline, now)} · {participantCount}/
+                        <span className={deadlineApproaching ? "deadline-urgent" : ""}>
+                          {deadlineText}
+                        </span>{" "}
+                        · {participantCount}/
                         {MAX_PARTICIPANTS} places filled
                       </p>
                     ) : (
