@@ -34,8 +34,11 @@ type SolaraAppProps = {
   connection: Connection;
   wallet?: AnchorWallet;
   address?: string;
-  onConnect: () => void;
+  onConnect: () => void | Promise<void>;
   onDisconnect?: () => void;
+  onRequestFunds?: () => Promise<string>;
+  secondaryConnect?: { label: string; onClick: () => void };
+  connectLabel: string;
   walletLabel: string;
 };
 
@@ -85,7 +88,8 @@ function timeRemaining(deadline: BN | bigint | number, now: number) {
   if (seconds <= 0) return "Deadline passed";
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  return hours > 0 ? `${hours}h ${minutes}m remaining` : `${Math.max(1, minutes)}m remaining`;
+  if (hours > 0) return `${hours}h ${minutes}m remaining`;
+  return minutes > 0 ? `${minutes}m ${seconds % 60}s remaining` : `${seconds}s remaining`;
 }
 
 function identifierSeed(identifier: BN) {
@@ -105,6 +109,9 @@ export function SolaraApp({
   address,
   onConnect,
   onDisconnect,
+  onRequestFunds,
+  secondaryConnect,
+  connectLabel,
   walletLabel,
 }: SolaraAppProps) {
   const [pots, setPots] = useState<Pot[]>([]);
@@ -124,8 +131,8 @@ export function SolaraApp({
     [connection, wallet],
   );
 
-  const refreshPots = useCallback(async () => {
-    setLoadingPots(true);
+  const refreshPots = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoadingPots(true);
     try {
       const accounts = (await program.account.pot.all()) as Array<{
         publicKey: PublicKey;
@@ -139,7 +146,7 @@ export function SolaraApp({
     } catch (fetchError) {
       setError(actionError(fetchError));
     } finally {
-      setLoadingPots(false);
+      if (showLoading) setLoadingPots(false);
     }
   }, [program]);
 
@@ -156,19 +163,37 @@ export function SolaraApp({
   }, [connection, wallet]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void refreshPots(), 0);
-    return () => window.clearTimeout(timer);
+    const initial = window.setTimeout(() => void refreshPots(), 0);
+    const interval = window.setInterval(() => void refreshPots(false), 8_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshPots(false);
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, [refreshPots]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void refreshBalance(), 0);
-    return () => window.clearTimeout(timer);
+    const initial = window.setTimeout(() => void refreshBalance(), 0);
+    const interval = window.setInterval(() => void refreshBalance(), 8_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshBalance();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, [refreshBalance]);
 
   useEffect(() => {
     const updateNow = () => setNow(Date.now());
     const initial = window.setTimeout(updateNow, 0);
-    const interval = window.setInterval(() => setNow(Date.now()), 15_000);
+    const interval = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(interval);
@@ -183,6 +208,34 @@ export function SolaraApp({
     [refreshBalance, refreshPots],
   );
 
+  async function connect() {
+    setError(null);
+    setNotice(null);
+    setPending("connect");
+    try {
+      await onConnect();
+    } catch (connectError) {
+      setError(actionError(connectError));
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function requestFunds() {
+    if (!onRequestFunds) return;
+    setError(null);
+    setNotice(null);
+    setPending("fund");
+    try {
+      const message = await onRequestFunds();
+      await afterTransaction(message);
+    } catch (fundError) {
+      setError(actionError(fundError));
+    } finally {
+      setPending(null);
+    }
+  }
+
   async function createPot(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!program || !wallet) return onConnect();
@@ -192,7 +245,9 @@ export function SolaraApp({
       const stakeLamports = parseSol(stake);
       const deadlineSeconds = Math.floor(new Date(deadline).getTime() / 1000);
       if (!task.trim()) throw new Error("Add a task description.");
-      if (task.trim().length > 160) throw new Error("Task descriptions are limited to 160 characters.");
+      if (new TextEncoder().encode(task.trim()).length > 160) {
+        throw new Error("Task descriptions are limited to 160 UTF-8 bytes.");
+      }
       if (!Number.isFinite(deadlineSeconds) || deadlineSeconds <= Math.floor(Date.now() / 1000)) {
         throw new Error("Choose a future deadline.");
       }
@@ -278,12 +333,24 @@ export function SolaraApp({
                 {balance === null ? "Loading balance" : `${formatSol(balance)} SOL`}
               </span>
               <span className="wallet-address" title={address}>{shorten(address)}</span>
+              {onRequestFunds ? (
+                <button className="text-button" type="button" disabled={pending !== null} onClick={() => void requestFunds()}>
+                  {pending === "fund" ? "Adding test SOL…" : "Add test SOL"}
+                </button>
+              ) : null}
               {onDisconnect ? <button className="text-button" type="button" onClick={onDisconnect}>Sign out</button> : null}
             </>
           ) : (
-            <button className="button button-primary" type="button" onClick={onConnect}>
-              Continue with email or Google
-            </button>
+            <div className="connect-actions">
+              <button className="button button-primary" type="button" disabled={pending !== null} onClick={() => void connect()}>
+                {pending === "connect" ? "Starting…" : connectLabel}
+              </button>
+              {secondaryConnect ? (
+                <button className="button button-secondary" type="button" disabled={pending !== null} onClick={secondaryConnect.onClick}>
+                  {secondaryConnect.label}
+                </button>
+              ) : null}
+            </div>
           )}
         </div>
       </header>
@@ -315,7 +382,7 @@ export function SolaraApp({
               </label>
               <label>
                 Deadline
-                <input type="datetime-local" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
+                <input type="datetime-local" step="1" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
               </label>
             </div>
             <label>
