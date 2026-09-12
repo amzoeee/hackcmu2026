@@ -22,3 +22,29 @@ wallet = ".wallets/deployer.json"
 
 [scripts]
 test = "npm run test:anchor"
+
+# Expired pots let refund tests run without waiting through the five-minute grace period.
+# Generated from the current IDL by scripts/create-test-fixtures.mjs before `npm test`.
+[[test.validator.account]]
+address = "BS42vrBqNKy7zNemWEbWh66zeiFaNnqUdKPkDLqrXta8"
+filename = "target/test-fixtures/mixed.json"
+
+[[test.validator.account]]
+address = "9Dr485ufTiMStaZL4QTwVjvh2yu3mxSJHbcJhXFiw7A1"
+filename = "target/test-fixtures/yes.json"
+
+[[test.validator.account]]
+address = "F85nBcannT5Bm8xsddjuHxznPA54W81upnSYfzMa8xSB"
+filename = "target/test-fixtures/no.json"
+
+[[test.validator.account]]
+address = "34vP3H8FN8KGSKZKijMza7UCzwxmAWPkY9zV7Sg55LWq"
+filename = "target/test-fixtures/empty.json"
+
+[[test.validator.account]]
+address = "6do4FHC6BaJuddht8iBJo8kcofc8wQtan5L7RMK2gbMF"
+filename = "target/test-fixtures/invalid-recipients.json"
+
+[[test.validator.account]]
+address = "GXPi1YCwpEZ8oJXKcrqoR3mYw3zQkktL4saQPWkM3r7s"
+filename = "target/test-fixtures/underfunded.json"

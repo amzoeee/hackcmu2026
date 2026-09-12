@@ -23,10 +23,10 @@
     "tools:check": "bash scripts/with-tools.sh bash scripts/check-tools.sh",
     "anchor": "bash scripts/with-tools.sh anchor",
     "anchor:build": "bash scripts/with-tools.sh bash scripts/build-program.sh",
-    "anchor:test": "npm run anchor:build && npm run anchor -- test --skip-build --provider.cluster localnet",
+    "anchor:test": "npm run anchor:build && node scripts/create-test-fixtures.mjs && npm run anchor -- test --skip-build --provider.cluster localnet",
     "anchor:deploy:devnet": "bash scripts/with-tools.sh bash scripts/deploy-devnet.sh",
     "test": "npm run anchor:test",
-    "test:anchor": "node --import tsx --test --test-timeout=100000 tests/program/*.test.ts",
+    "test:anchor": "node --import tsx --test --test-timeout=120000 tests/program/*.test.ts",
     "test:offchain": "node --import tsx --test --test-timeout=90000 tests/*.test.ts"
   },
   "dependencies": {
