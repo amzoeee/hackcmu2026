@@ -14,5 +14,7 @@ export default defineConfig([
     ".anchor/**",
     "target/**",
     "src/lib/anchor/generated/**",
+    // The Discord bot is its own npm package with its own dependencies and checks.
+    "bot/**",
   ]),
 ]);
