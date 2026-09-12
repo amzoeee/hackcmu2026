@@ -1,10 +1,16 @@
-import { AnchorProvider, Program, utils } from "@coral-xyz/anchor";
+import {
+  AnchorProvider,
+  Program,
+  utils,
+  type IdlAccounts,
+} from "@coral-xyz/anchor";
 import type { AnchorWallet } from "@solana/wallet-adapter-react";
 import {
   Connection,
   SendTransactionError,
   SystemProgram,
   VersionedTransaction,
+  type PublicKey,
 } from "@solana/web3.js";
 import { SOLANA_WS_URL } from "../solana";
 import idl from "./generated/accountability.json";
@@ -105,6 +111,50 @@ export function getAccountabilityProgram(
     }
   };
   return new Program<Accountability>(idl as Accountability, provider);
+}
+
+export type PotRecord = {
+  publicKey: PublicKey;
+  account: IdlAccounts<Accountability>["pot"];
+};
+
+export type PotRead = {
+  pots: PotRecord[];
+  /**
+   * Pots the current layout cannot read. They still hold their stakes, so the
+   * caller has to say so rather than let them disappear from the list.
+   */
+  undecodable: PublicKey[];
+};
+
+/**
+ * Reads every pot like `program.account.pot.all()`, but separates accounts that
+ * do not decode with the current layout instead of failing the whole read.
+ */
+export async function fetchDecodablePots(
+  program: Program<Accountability>,
+): Promise<PotRead> {
+  const discriminator = program.coder.accounts.memcmp("pot") as {
+    offset: number;
+    bytes: string;
+  };
+  const accounts = await program.provider.connection.getProgramAccounts(
+    program.programId,
+    { commitment: "confirmed", filters: [{ memcmp: discriminator }] },
+  );
+  const pots: PotRecord[] = [];
+  const undecodable: PublicKey[] = [];
+  for (const { pubkey, account } of accounts) {
+    try {
+      pots.push({
+        publicKey: pubkey,
+        account: program.coder.accounts.decode("pot", account.data),
+      });
+    } catch {
+      undecodable.push(pubkey);
+    }
+  }
+  return { pots, undecodable };
 }
 
 /** A public account reader. It cannot sign, so it is safe to use before login. */

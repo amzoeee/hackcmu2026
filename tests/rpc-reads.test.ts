@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { it } from "node:test";
-import { AnchorError, AnchorProvider, Wallet, utils } from "@coral-xyz/anchor";
+import {
+  AnchorError,
+  AnchorProvider,
+  BN,
+  Wallet,
+  utils,
+} from "@coral-xyz/anchor";
 import {
   Connection,
   Keypair,
@@ -12,7 +18,9 @@ import {
   type TransactionError,
 } from "@solana/web3.js";
 import {
+  fetchDecodablePots,
   getAccountabilityProgram,
+  getReadOnlyAccountabilityProgram,
   getReadOnlyConnection,
 } from "../src/lib/anchor/client";
 
@@ -144,7 +152,7 @@ it(
     const started = Date.now();
     await assert.rejects(
       program.methods
-        .joinPot({ yes: {} })
+        .joinPot({ yes: {} }, null)
         .accountsPartial({
           participant: wallet.publicKey,
           pot: Keypair.generate().publicKey,
@@ -270,7 +278,7 @@ it("preserves explicit submission errors and translates logged confirmation fail
     new Connection(`http://127.0.0.1:${address.port}`, "confirmed"),
     wallet,
   );
-  const join = program.methods.joinPot({ yes: {} }).accountsPartial({
+  const join = program.methods.joinPot({ yes: {} }, null).accountsPartial({
     participant: wallet.publicKey,
     pot: Keypair.generate().publicKey,
     systemProgram: SystemProgram.programId,
@@ -477,3 +485,131 @@ it(
     }
   },
 );
+
+it("reports pot accounts that do not decode instead of failing the whole read", async (t) => {
+  const programId = Keypair.generate().publicKey;
+  const responses: Array<{ pubkey: string; data: Buffer }> = [];
+  const server = createServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString()) as {
+      id: string;
+      method: string;
+      params: [string, { filters?: unknown[] }];
+    };
+    assert.equal(body.method, "getProgramAccounts");
+    assert.equal(body.params[1].filters?.length, 1);
+    response.end(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: body.id,
+        result: responses.map(({ pubkey, data }) => ({
+          pubkey,
+          account: {
+            lamports: 1,
+            owner: programId.toBase58(),
+            data: [data.toString("base64"), "base64"],
+            executable: false,
+            rentEpoch: 0,
+            space: data.length,
+          },
+        })),
+      }),
+    );
+  });
+  t.after(async () => {
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const program = getReadOnlyAccountabilityProgram(
+    new Connection(`http://127.0.0.1:${address.port}`, "confirmed"),
+  );
+  const participant = Keypair.generate().publicKey;
+  const pot = {
+    creator: Keypair.generate().publicKey,
+    judge: Keypair.generate().publicKey,
+    identifier: new BN(7),
+    task: "Ship it",
+    stake: new BN(100),
+    deadline: new BN(2_000_000_000),
+    createdAt: new BN(1_000),
+    yesParticipants: [participant],
+    noParticipants: [],
+    settled: false,
+    outcome: null,
+    proofUri: "https://example.com/proof",
+    accessHash: null,
+  };
+  const current = await program.coder.accounts.encode("pot", pot);
+  // The previous layout ended at `outcome`. With an empty proof and no invite
+  // hash, the current encoding is that layout plus five zero bytes.
+  const legacyOf = (data: Buffer) => data.subarray(0, data.length - 5);
+  const legacy = legacyOf(
+    await program.coder.accounts.encode("pot", {
+      ...pot,
+      task: "Older pot",
+      proofUri: "",
+    }),
+  );
+  // Previous pots were allocated 599 bytes; a settled full one has no spare bytes.
+  const paddedLegacy = Buffer.concat([
+    legacy,
+    Buffer.alloc(599 - legacy.length),
+  ]);
+  const fullLegacy = legacyOf(
+    await program.coder.accounts.encode("pot", {
+      ...pot,
+      task: "x".repeat(160),
+      yesParticipants: Array.from(
+        { length: 10 },
+        () => Keypair.generate().publicKey,
+      ),
+      settled: true,
+      outcome: true,
+      proofUri: "",
+    }),
+  );
+  assert.equal(fullLegacy.length, 599);
+  const garbage = Buffer.concat([
+    current.subarray(0, 8),
+    Buffer.from([1, 2, 3]),
+  ]);
+  const keys = Array.from({ length: 4 }, () => Keypair.generate().publicKey);
+  responses.push(
+    { pubkey: keys[0].toBase58(), data: current },
+    { pubkey: keys[1].toBase58(), data: paddedLegacy },
+    { pubkey: keys[2].toBase58(), data: fullLegacy },
+    { pubkey: keys[3].toBase58(), data: garbage },
+  );
+
+  const { pots, undecodable } = await fetchDecodablePots(program);
+  assert.deepEqual(
+    pots.map(({ publicKey }) => publicKey.toBase58()),
+    [keys[0].toBase58(), keys[1].toBase58()],
+  );
+  // The caller is told which accounts were left out, so a pot holding stakes
+  // cannot vanish from the list without explanation.
+  assert.deepEqual(
+    undecodable.map((publicKey) => publicKey.toBase58()),
+    [keys[2].toBase58(), keys[3].toBase58()],
+  );
+  assert.equal(pots[0].account.task, "Ship it");
+  assert.equal(pots[0].account.proofUri, "https://example.com/proof");
+  assert.equal(pots[1].account.task, "Older pot");
+  assert.equal(pots[1].account.proofUri, "");
+  assert.equal(pots[1].account.accessHash, null);
+  assert.equal(
+    pots[1].account.yesParticipants[0].toBase58(),
+    participant.toBase58(),
+  );
+
+  responses.length = 0;
+  responses.push({ pubkey: keys[0].toBase58(), data: current });
+  const clean = await fetchDecodablePots(program);
+  assert.equal(clean.pots.length, 1);
+  assert.deepEqual(clean.undecodable, []);
+});

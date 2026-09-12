@@ -470,6 +470,8 @@ export function GroupChallengeForm({
               new BN(active!.stake),
               new BN(active!.deadline),
               new PublicKey(active!.judge),
+              // Group pots are shared by link, not gated by an invite code.
+              null,
             )
             .accountsPartial({
               creator: wallet.publicKey,
@@ -482,7 +484,8 @@ export function GroupChallengeForm({
       const joinInstructions = await Promise.all(
         missingJoins.map((entry) =>
           program.methods
-            .joinPot({ no: {} })
+            // Group pots are shared by link, not gated by an invite code.
+            .joinPot({ no: {} }, null)
             .accountsPartial({
               participant: wallet.publicKey,
               pot: new PublicKey(entry.pot),

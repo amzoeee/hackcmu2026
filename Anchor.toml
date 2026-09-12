@@ -48,3 +48,7 @@ filename = "target/test-fixtures/invalid-recipients.json"
 [[test.validator.account]]
 address = "GXPi1YCwpEZ8oJXKcrqoR3mYw3zQkktL4saQPWkM3r7s"
 filename = "target/test-fixtures/underfunded.json"
+
+[[test.validator.account]]
+address = "A8DnuE3XqhfovZ1hQRrAbfeFejxmFdyfifnmEDpCP6tC"
+filename = "target/test-fixtures/pre-upgrade.json"

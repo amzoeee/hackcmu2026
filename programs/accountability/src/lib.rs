@@ -1,12 +1,16 @@
 #![allow(unexpected_cfgs)]
 
 use anchor_lang::prelude::*;
+use solana_sha256_hasher::hash;
 use anchor_lang::system_program;
 
 declare_id!("EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb");
 
 const MAX_TASK_LENGTH: usize = 160;
 const MAX_PARTICIPANTS: usize = 10;
+const MAX_PROOF_LENGTH: usize = 200;
+const MAX_ACCESS_CODE_LENGTH: usize = 64;
+const MAX_NAME_LENGTH: usize = 32;
 
 #[constant]
 pub const SETTLEMENT_GRACE_SECONDS: i64 = 300;
@@ -22,6 +26,7 @@ pub mod accountability {
         stake: u64,
         deadline: i64,
         judge: Pubkey,
+        access_hash: Option<[u8; 32]>,
     ) -> Result<()> {
         require!(!task.trim().is_empty(), AccountabilityError::TaskRequired);
         require!(
@@ -54,10 +59,104 @@ pub mod accountability {
         pot.no_participants = Vec::new();
         pot.settled = false;
         pot.outcome = None;
+        pot.proof_uri = String::new();
+        // The client hashes the pot address together with the invite code; the
+        // program stores that hash as given. See `access_code_hash`.
+        pot.access_hash = access_hash;
         Ok(())
     }
 
-    pub fn join_pot(ctx: Context<JoinPot>, side: Side) -> Result<()> {
+    /// Grows a pot allocated before `proof_uri` and `access_hash` existed.
+    ///
+    /// Those pots were sized for the older layout, and a full one has no spare
+    /// byte for the two new fields, so it stops deserializing: it can no longer
+    /// be settled or refunded, and its stakes would be stranded. Anyone may pay
+    /// the rent difference to grow such a pot to the current layout. The added
+    /// bytes are zeroed, which reads back as an empty proof link and no invite
+    /// code.
+    pub fn resize_pot(ctx: Context<ResizePot>) -> Result<()> {
+        let pot = ctx.accounts.pot.to_account_info();
+        let current = {
+            let data = pot.try_borrow_data()?;
+            require!(
+                data.len() >= 8 && &data[..8] == Pot::DISCRIMINATOR,
+                AccountabilityError::NotAPot
+            );
+            // A pot already on the current layout needs nothing, so repeated or
+            // racing repairs succeed instead of confusing the caller.
+            if data.len() >= Pot::SPACE {
+                return Ok(());
+            }
+            data.len()
+        };
+
+        // The payer covers the rent the added bytes need. Taking it from the
+        // balance instead would raise the rent floor above the pot's own
+        // reserve and strand that much of the stakes.
+        let rent = Rent::get()?;
+        let reserve = rent.minimum_balance(Pot::SPACE);
+        let top_up = reserve
+            .saturating_sub(rent.minimum_balance(current))
+            .max(reserve.saturating_sub(pot.lamports()));
+        if top_up > 0 {
+            system_program::transfer(
+                CpiContext::new(
+                    ctx.accounts.system_program.to_account_info(),
+                    system_program::Transfer {
+                        from: ctx.accounts.payer.to_account_info(),
+                        to: pot.clone(),
+                    },
+                ),
+                top_up,
+            )?;
+        }
+        pot.resize(Pot::SPACE)?;
+        Ok(())
+    }
+
+    /// The creator or any YES participant may link evidence until the pot is
+    /// settled. Only the creator may replace a link that is already recorded, so
+    /// one participant cannot swap another's evidence out from under the judge.
+    /// Every accepted link is emitted, leaving the replaced ones in the log.
+    pub fn submit_proof(ctx: Context<SubmitProof>, uri: String) -> Result<()> {
+        let pot = &mut ctx.accounts.pot;
+        let submitter = ctx.accounts.submitter.key();
+        require!(
+            pot.creator == submitter || pot.yes_participants.contains(&submitter),
+            AccountabilityError::UnauthorizedProof
+        );
+        require!(!pot.settled, AccountabilityError::PotSettled);
+        require!(
+            pot.proof_uri.is_empty() || pot.creator == submitter,
+            AccountabilityError::ProofAlreadySubmitted
+        );
+        require!(!uri.trim().is_empty(), AccountabilityError::ProofRequired);
+        require!(uri.len() <= MAX_PROOF_LENGTH, AccountabilityError::ProofTooLong);
+        let pot_key = pot.key();
+        pot.proof_uri = uri.clone();
+        emit!(ProofSubmitted {
+            pot: pot_key,
+            submitter,
+            uri,
+        });
+        Ok(())
+    }
+
+    /// Creates or overwrites the display name for the signing wallet.
+    pub fn set_profile(ctx: Context<SetProfile>, name: String) -> Result<()> {
+        require!(!name.trim().is_empty(), AccountabilityError::NameRequired);
+        require!(name.len() <= MAX_NAME_LENGTH, AccountabilityError::NameTooLong);
+        let profile = &mut ctx.accounts.profile;
+        profile.wallet = ctx.accounts.wallet.key();
+        profile.name = name;
+        Ok(())
+    }
+
+    pub fn join_pot(
+        ctx: Context<JoinPot>,
+        side: Side,
+        access_code: Option<String>,
+    ) -> Result<()> {
         let pot = &mut ctx.accounts.pot;
         let now = Clock::get()?.unix_timestamp;
         require!(!pot.settled, AccountabilityError::PotSettled);
@@ -74,6 +173,22 @@ pub mod accountability {
                     .contains(&ctx.accounts.participant.key()),
             AccountabilityError::AlreadyParticipating
         );
+        if let Some(code) = access_code.as_deref() {
+            require!(
+                code.len() <= MAX_ACCESS_CODE_LENGTH,
+                AccountabilityError::AccessCodeTooLong
+            );
+        }
+        // Open pots ignore any supplied code; gated pots require the matching one.
+        if let Some(expected) = pot.access_hash {
+            let code = access_code
+                .as_deref()
+                .ok_or(AccountabilityError::InvalidAccessCode)?;
+            require!(
+                access_code_hash(&pot.key(), code) == expected,
+                AccountabilityError::InvalidAccessCode
+            );
+        }
 
         system_program::transfer(
             CpiContext::new(
@@ -214,6 +329,19 @@ fn pay_recipients(
     Ok(())
 }
 
+/// Invite-code hashes are bound to the pot they gate, so a hash cannot be
+/// replayed against another pot and one table of precomputed hashes cannot
+/// cover every pot. The code itself travels as plain instruction data, so the
+/// first join publishes it on the ledger for good: generate codes with
+/// `createInviteCode` rather than choosing memorable ones, and treat the gate
+/// as a barrier to casual discovery, not a secret.
+fn access_code_hash(pot: &Pubkey, code: &str) -> [u8; 32] {
+    let mut input = Vec::with_capacity(32 + code.len());
+    input.extend_from_slice(pot.as_ref());
+    input.extend_from_slice(code.as_bytes());
+    hash(&input).to_bytes()
+}
+
 #[derive(Accounts)]
 #[instruction(identifier: u64)]
 pub struct CreatePot<'info> {
@@ -255,6 +383,41 @@ pub struct RefundPot<'info> {
     pub pot: Account<'info, Pot>,
 }
 
+#[derive(Accounts)]
+pub struct ResizePot<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// CHECK: A pre-upgrade pot cannot be deserialized, so it is read as raw
+    /// bytes. The owner constraint and the discriminator check in the handler
+    /// confirm the account is one of this program's pots.
+    #[account(mut, owner = crate::ID)]
+    pub pot: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SubmitProof<'info> {
+    pub submitter: Signer<'info>,
+    #[account(mut)]
+    pub pot: Account<'info, Pot>,
+}
+
+// The seeds tie each profile to its wallet, so only that wallet can write it.
+#[derive(Accounts)]
+pub struct SetProfile<'info> {
+    #[account(mut)]
+    pub wallet: Signer<'info>,
+    #[account(
+        init_if_needed,
+        payer = wallet,
+        space = Profile::SPACE,
+        seeds = [b"profile", wallet.key().as_ref()],
+        bump
+    )]
+    pub profile: Account<'info, Profile>,
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 pub struct Pot {
     pub creator: Pubkey,
@@ -268,12 +431,48 @@ pub struct Pot {
     pub no_participants: Vec<Pubkey>,
     pub settled: bool,
     pub outcome: Option<bool>,
+    pub proof_uri: String,
+    pub access_hash: Option<[u8; 32]>,
 }
 
 impl Pot {
     // Both vector length prefixes are stored, but their combined capacity is ten wallets.
-    pub const SPACE: usize =
-        8 + 32 + 32 + 8 + 4 + MAX_TASK_LENGTH + 8 + 8 + 8 + 4 + 4 + (32 * MAX_PARTICIPANTS) + 1 + 2;
+    pub const SPACE: usize = 8
+        + 32
+        + 32
+        + 8
+        + 4
+        + MAX_TASK_LENGTH
+        + 8
+        + 8
+        + 8
+        + 4
+        + 4
+        + (32 * MAX_PARTICIPANTS)
+        + 1
+        + 2
+        + 4
+        + MAX_PROOF_LENGTH
+        + 1
+        + 32;
+}
+
+#[account]
+pub struct Profile {
+    pub wallet: Pubkey,
+    pub name: String,
+}
+
+impl Profile {
+    pub const SPACE: usize = 8 + 32 + 4 + MAX_NAME_LENGTH;
+}
+
+/// Only the newest proof link is stored; the log keeps the ones it replaced.
+#[event]
+pub struct ProofSubmitted {
+    pub pot: Pubkey,
+    pub submitter: Pubkey,
+    pub uri: String,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
@@ -320,6 +519,24 @@ pub enum AccountabilityError {
     InvalidJudge,
     #[msg("The pot cannot pay the recorded stakes while preserving rent.")]
     InsufficientPotBalance,
+    #[msg("Only the creator or a YES participant may submit proof.")]
+    UnauthorizedProof,
+    #[msg("A proof link is required.")]
+    ProofRequired,
+    #[msg("The proof link is too long.")]
+    ProofTooLong,
+    #[msg("The invite code is too long.")]
+    AccessCodeTooLong,
+    #[msg("The invite code is missing or incorrect.")]
+    InvalidAccessCode,
+    #[msg("A display name is required.")]
+    NameRequired,
+    #[msg("The display name is too long.")]
+    NameTooLong,
+    #[msg("Only the creator may replace a proof link that is already recorded.")]
+    ProofAlreadySubmitted,
+    #[msg("That account is not a pot.")]
+    NotAPot,
 }
 
 #[cfg(test)]

@@ -80,6 +80,17 @@ export type Accountability = {
         {
           "name": "judge",
           "type": "pubkey"
+        },
+        {
+          "name": "accessHash",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
         }
       ]
     },
@@ -118,6 +129,12 @@ export type Accountability = {
               "name": "side"
             }
           }
+        },
+        {
+          "name": "accessCode",
+          "type": {
+            "option": "string"
+          }
         }
       ]
     },
@@ -145,6 +162,106 @@ export type Accountability = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "resizePot",
+      "docs": [
+        "Grows a pot allocated before `proof_uri` and `access_hash` existed.",
+        "",
+        "Those pots were sized for the older layout, and a full one has no spare",
+        "byte for the two new fields, so it stops deserializing: it can no longer",
+        "be settled or refunded, and its stakes would be stranded. Anyone may pay",
+        "the rent difference to grow such a pot to the current layout. The added",
+        "bytes are zeroed, which reads back as an empty proof link and no invite",
+        "code."
+      ],
+      "discriminator": [
+        167,
+        14,
+        148,
+        231,
+        94,
+        59,
+        77,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pot",
+          "docs": [
+            "bytes. The owner constraint and the discriminator check in the handler",
+            "confirm the account is one of this program's pots."
+          ],
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "setProfile",
+      "docs": [
+        "Creates or overwrites the display name for the signing wallet."
+      ],
+      "discriminator": [
+        221,
+        221,
+        195,
+        121,
+        133,
+        71,
+        113,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "wallet"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "settlePot",
@@ -175,6 +292,41 @@ export type Accountability = {
           "type": "bool"
         }
       ]
+    },
+    {
+      "name": "submitProof",
+      "docs": [
+        "The creator or any YES participant may link evidence until the pot is",
+        "settled. Only the creator may replace a link that is already recorded, so",
+        "one participant cannot swap another's evidence out from under the judge.",
+        "Every accepted link is emitted, leaving the replaced ones in the log."
+      ],
+      "discriminator": [
+        54,
+        241,
+        46,
+        84,
+        4,
+        212,
+        46,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "submitter",
+          "signer": true
+        },
+        {
+          "name": "pot",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -189,6 +341,34 @@ export type Accountability = {
         191,
         59,
         58
+      ]
+    },
+    {
+      "name": "profile",
+      "discriminator": [
+        184,
+        101,
+        165,
+        188,
+        95,
+        63,
+        127,
+        188
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "proofSubmitted",
+      "discriminator": [
+        160,
+        51,
+        85,
+        70,
+        249,
+        89,
+        5,
+        139
       ]
     }
   ],
@@ -282,6 +462,51 @@ export type Accountability = {
       "code": 6017,
       "name": "insufficientPotBalance",
       "msg": "The pot cannot pay the recorded stakes while preserving rent."
+    },
+    {
+      "code": 6018,
+      "name": "unauthorizedProof",
+      "msg": "Only the creator or a YES participant may submit proof."
+    },
+    {
+      "code": 6019,
+      "name": "proofRequired",
+      "msg": "A proof link is required."
+    },
+    {
+      "code": 6020,
+      "name": "proofTooLong",
+      "msg": "The proof link is too long."
+    },
+    {
+      "code": 6021,
+      "name": "accessCodeTooLong",
+      "msg": "The invite code is too long."
+    },
+    {
+      "code": 6022,
+      "name": "invalidAccessCode",
+      "msg": "The invite code is missing or incorrect."
+    },
+    {
+      "code": 6023,
+      "name": "nameRequired",
+      "msg": "A display name is required."
+    },
+    {
+      "code": 6024,
+      "name": "nameTooLong",
+      "msg": "The display name is too long."
+    },
+    {
+      "code": 6025,
+      "name": "proofAlreadySubmitted",
+      "msg": "Only the creator may replace a proof link that is already recorded."
+    },
+    {
+      "code": 6026,
+      "name": "notAPot",
+      "msg": "That account is not a pot."
     }
   ],
   "types": [
@@ -339,6 +564,60 @@ export type Accountability = {
             "type": {
               "option": "bool"
             }
+          },
+          {
+            "name": "proofUri",
+            "type": "string"
+          },
+          {
+            "name": "accessHash",
+            "type": {
+              "option": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "profile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "proofSubmitted",
+      "docs": [
+        "Only the newest proof link is stored; the log keeps the ones it replaced."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pot",
+            "type": "pubkey"
+          },
+          {
+            "name": "submitter",
+            "type": "pubkey"
+          },
+          {
+            "name": "uri",
+            "type": "string"
           }
         ]
       }

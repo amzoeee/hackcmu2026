@@ -4,7 +4,7 @@ import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 const ONE_SOL = BigInt(LAMPORTS_PER_SOL);
 
 // Pot::SPACE in the Anchor program, including the account discriminator.
-export const POT_ACCOUNT_BYTES = 599;
+export const POT_ACCOUNT_BYTES = 836;
 
 const POT_SEED = new TextEncoder().encode("pot");
 
