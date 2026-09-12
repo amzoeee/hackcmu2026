@@ -89,7 +89,11 @@ On the compiled interface, opening **Not completed**, tabbing to **Cancel**, and
 
 Pot: `5txTaNASwXn3cY3gmqqxMxvinRqAvJy1JMPcHHV6K27M`. Settlement: `4SuTj5nJDxgJq3RKeFLdUsqoz4XcWHjAEoHBFbXt8oRDbhMYYPcvQdU1tsbsixewgYJ21dtoaTTnNtdngS7kKkTQ`.
 
-The final markup also disables creation fields during submission and adds larger mobile wallet/deadline targets. Their dedicated delayed-form and mobile checks remain incomplete: the viewport override did not apply, and a later browser-control call stalled beyond the work deadline. The keyboard and status checks above were completed; no screen-reader audio test was performed.
+The follow-up checks passed after resuming browser verification. At a measured 320px viewport, every wallet and quick-deadline control was 44px tall, the document had no horizontal overflow, and a shared pot received focus below the sticky header (pot top 184px; header bottom 167px). Screenshot capture remained unavailable, so this check used the rendered DOM's dimensions and accessibility state. No screen-reader audio test was performed.
+
+With blockhash preparation deliberately withheld, all four creation fields and all three deadline presets became disabled. The request timed out with all entered values preserved, controls enabled again, and the wallet still at 0.25 SOL. Restoring responses allowed creation and cleared the task only after confirmation. A repeated same-wallet join race showed one recorded stake and a clean `This wallet has already joined the pot.` rejection. The pot then settled successfully: its sole winner moved from 0.23492508 to 0.24492008 SOL, recovering the 0.01 SOL staked pool less the settlement fee.
+
+Pot: `229JzQiATqe9SJ9FaiLM4j591nUqn1VnB8vP7owXbCsz`. Settlement: `3Fpat7Jsj6Pay3EZkncBH6rLW9aT8X9ErgJDvdzUF4VjYuxqrFGkVsek48XdQ2WLfVSdq4p4CEkr5vYcB4KpBrtM`.
 
 ## Original local ledger identifiers
 
