@@ -1,0 +1,590 @@
+{
+  "capturedAt": "2026-09-12T13:15:34.574Z",
+  "rpcUrl": "https://api.devnet.solana.com",
+  "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "program": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+  "pot": {
+    "address": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+    "contextSlot": 497204278,
+    "dataBytes": 599,
+    "lamports": 3693160,
+    "rentLamports": 3693160,
+    "aboveRentLamports": 0,
+    "creator": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+    "judge": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+    "task": "Present Solara's live devnet demo",
+    "stakeLamports": 10000000,
+    "deadline": "1789218799",
+    "yes": ["43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU"],
+    "no": ["3PiWQaPdZwHhLJyhCF5Zz53NezmMtjSRMyzTMWU8zmdy"],
+    "settled": true,
+    "outcome": true
+  },
+  "allChecksPassed": true,
+  "transactions": [
+    {
+      "signature": "39WknqjmHdNrqfvnQZEfR1w6ye4HHFnaXaRfTXg3FHYnr9QTLJX9VE9dpL2jj4VTn6PMiMzz5JGdpa1Xs1HFRNsR",
+      "slot": 497202779,
+      "blockTime": 1789218686,
+      "feeLamports": 5000,
+      "instructionNames": ["create_pot"],
+      "checks": {
+        "success": true,
+        "potIncluded": true,
+        "programInstruction": true,
+        "balanceConservation": true,
+        "creationRent": true,
+        "creationDebit": true
+      },
+      "expected": [],
+      "balances": [
+        {
+          "address": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+          "feePayer": true,
+          "beforeLamports": 250000000,
+          "afterLamports": 246301840,
+          "deltaLamports": -3698160,
+          "deltaExcludingFeeLamports": -3693160
+        },
+        {
+          "address": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+          "feePayer": false,
+          "beforeLamports": 0,
+          "afterLamports": 3693160,
+          "deltaLamports": 3693160,
+          "deltaExcludingFeeLamports": 3693160
+        }
+      ],
+      "raw": {
+        "blockTime": 1789218686,
+        "meta": {
+          "computeUnitsConsumed": 13736,
+          "costUnits": 15129,
+          "err": null,
+          "fee": 5000,
+          "innerInstructions": [
+            {
+              "index": 0,
+              "instructions": [
+                {
+                  "parsed": {
+                    "info": {
+                      "lamports": 3693160,
+                      "newAccount": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                      "owner": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+                      "source": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+                      "space": 599
+                    },
+                    "type": "createAccount"
+                  },
+                  "program": "system",
+                  "programId": "11111111111111111111111111111111",
+                  "stackHeight": 2
+                }
+              ]
+            }
+          ],
+          "logMessages": [
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb invoke [1]",
+            "Program log: Instruction: CreatePot",
+            "Program 11111111111111111111111111111111 invoke [2]",
+            "Program 11111111111111111111111111111111 success",
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb consumed 13736 of 200000 compute units",
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb success"
+          ],
+          "postBalances": [246301840, 3693160, 1, 833120],
+          "postTokenBalances": [],
+          "preBalances": [250000000, 0, 1, 833120],
+          "preTokenBalances": [],
+          "rewards": [],
+          "status": {
+            "Ok": null
+          }
+        },
+        "slot": 497202779,
+        "transaction": {
+          "message": {
+            "accountKeys": [
+              {
+                "pubkey": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+                "signer": true,
+                "source": "transaction",
+                "writable": true
+              },
+              {
+                "pubkey": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                "signer": false,
+                "source": "transaction",
+                "writable": true
+              },
+              {
+                "pubkey": "11111111111111111111111111111111",
+                "signer": false,
+                "source": "transaction",
+                "writable": false
+              },
+              {
+                "pubkey": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+                "signer": false,
+                "source": "transaction",
+                "writable": false
+              }
+            ],
+            "instructions": [
+              {
+                "accounts": [
+                  "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+                  "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                  "11111111111111111111111111111111"
+                ],
+                "data": "gpzLwtTfaNi9KrgkqdrJqbU22iDzeJ27C46LB7p1ai7bFBpTCwyytyyGP2jSZBkFXjpo5ffX3pJEnK3ZYJKQ9ASDdomjRjq4BAbE3BXoUCYvkHgFivECSPKg5bnzQAnHauV5exSXhn",
+                "programId": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+                "stackHeight": 1
+              }
+            ],
+            "recentBlockhash": "Hoj8hsVnmSWKyUMkc9DzzC4KC4XyPPAWdWvu2KteF7bo"
+          },
+          "signatures": [
+            "39WknqjmHdNrqfvnQZEfR1w6ye4HHFnaXaRfTXg3FHYnr9QTLJX9VE9dpL2jj4VTn6PMiMzz5JGdpa1Xs1HFRNsR"
+          ]
+        },
+        "transactionIndex": 0,
+        "version": "legacy"
+      }
+    },
+    {
+      "signature": "4J6Hheqxr3x1i4XyaEFbjuKUPFRSQmQK5b9qEDNB2kyRXxSo4jouQbjbJcHBZCL4N94g8kHwBK8VHhgRVex33JM5",
+      "slot": 497202906,
+      "blockTime": 1789218707,
+      "feeLamports": 5000,
+      "instructionNames": ["join_pot"],
+      "checks": {
+        "success": true,
+        "potIncluded": true,
+        "programInstruction": true,
+        "balanceConservation": true,
+        "stakeCredited": true,
+        "stakeDebited": true
+      },
+      "expected": [],
+      "balances": [
+        {
+          "address": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+          "feePayer": true,
+          "beforeLamports": 246301840,
+          "afterLamports": 236296840,
+          "deltaLamports": -10005000,
+          "deltaExcludingFeeLamports": -10000000
+        },
+        {
+          "address": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+          "feePayer": false,
+          "beforeLamports": 3693160,
+          "afterLamports": 13693160,
+          "deltaLamports": 10000000,
+          "deltaExcludingFeeLamports": 10000000
+        }
+      ],
+      "raw": {
+        "blockTime": 1789218707,
+        "meta": {
+          "computeUnitsConsumed": 5907,
+          "costUnits": 7277,
+          "err": null,
+          "fee": 5000,
+          "innerInstructions": [
+            {
+              "index": 0,
+              "instructions": [
+                {
+                  "parsed": {
+                    "info": {
+                      "destination": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                      "lamports": 10000000,
+                      "source": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU"
+                    },
+                    "type": "transfer"
+                  },
+                  "program": "system",
+                  "programId": "11111111111111111111111111111111",
+                  "stackHeight": 2
+                }
+              ]
+            }
+          ],
+          "logMessages": [
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb invoke [1]",
+            "Program log: Instruction: JoinPot",
+            "Program 11111111111111111111111111111111 invoke [2]",
+            "Program 11111111111111111111111111111111 success",
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb consumed 5907 of 200000 compute units",
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb success"
+          ],
+          "postBalances": [236296840, 13693160, 1, 833120],
+          "postTokenBalances": [],
+          "preBalances": [246301840, 3693160, 1, 833120],
+          "preTokenBalances": [],
+          "rewards": [],
+          "status": {
+            "Ok": null
+          }
+        },
+        "slot": 497202906,
+        "transaction": {
+          "message": {
+            "accountKeys": [
+              {
+                "pubkey": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+                "signer": true,
+                "source": "transaction",
+                "writable": true
+              },
+              {
+                "pubkey": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                "signer": false,
+                "source": "transaction",
+                "writable": true
+              },
+              {
+                "pubkey": "11111111111111111111111111111111",
+                "signer": false,
+                "source": "transaction",
+                "writable": false
+              },
+              {
+                "pubkey": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+                "signer": false,
+                "source": "transaction",
+                "writable": false
+              }
+            ],
+            "instructions": [
+              {
+                "accounts": [
+                  "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+                  "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                  "11111111111111111111111111111111"
+                ],
+                "data": "4B4CBrnz4ZcxF",
+                "programId": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+                "stackHeight": 1
+              }
+            ],
+            "recentBlockhash": "3kzjgF6ZqBm2sydY9QcE4C1D8drQSfEur3CbPDLdjuNa"
+          },
+          "signatures": [
+            "4J6Hheqxr3x1i4XyaEFbjuKUPFRSQmQK5b9qEDNB2kyRXxSo4jouQbjbJcHBZCL4N94g8kHwBK8VHhgRVex33JM5"
+          ]
+        },
+        "transactionIndex": 5,
+        "version": "legacy"
+      }
+    },
+    {
+      "signature": "3VyRJzdFEs8s2h7rBVvNdaN5xjSKmBiaJaSXryGEVtbTCSUrNoEcG2NSQesKhUUKG6HvLGcNS2BLGJDYQ1rPkA3J",
+      "slot": 497202960,
+      "blockTime": 1789218716,
+      "feeLamports": 5000,
+      "instructionNames": ["join_pot"],
+      "checks": {
+        "success": true,
+        "potIncluded": true,
+        "programInstruction": true,
+        "balanceConservation": true,
+        "stakeCredited": true,
+        "stakeDebited": true
+      },
+      "expected": [],
+      "balances": [
+        {
+          "address": "3PiWQaPdZwHhLJyhCF5Zz53NezmMtjSRMyzTMWU8zmdy",
+          "feePayer": true,
+          "beforeLamports": 250000000,
+          "afterLamports": 239995000,
+          "deltaLamports": -10005000,
+          "deltaExcludingFeeLamports": -10000000
+        },
+        {
+          "address": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+          "feePayer": false,
+          "beforeLamports": 13693160,
+          "afterLamports": 23693160,
+          "deltaLamports": 10000000,
+          "deltaExcludingFeeLamports": 10000000
+        }
+      ],
+      "raw": {
+        "blockTime": 1789218716,
+        "meta": {
+          "computeUnitsConsumed": 6228,
+          "costUnits": 7598,
+          "err": null,
+          "fee": 5000,
+          "innerInstructions": [
+            {
+              "index": 0,
+              "instructions": [
+                {
+                  "parsed": {
+                    "info": {
+                      "destination": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                      "lamports": 10000000,
+                      "source": "3PiWQaPdZwHhLJyhCF5Zz53NezmMtjSRMyzTMWU8zmdy"
+                    },
+                    "type": "transfer"
+                  },
+                  "program": "system",
+                  "programId": "11111111111111111111111111111111",
+                  "stackHeight": 2
+                }
+              ]
+            }
+          ],
+          "logMessages": [
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb invoke [1]",
+            "Program log: Instruction: JoinPot",
+            "Program 11111111111111111111111111111111 invoke [2]",
+            "Program 11111111111111111111111111111111 success",
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb consumed 6228 of 200000 compute units",
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb success"
+          ],
+          "postBalances": [239995000, 23693160, 1, 833120],
+          "postTokenBalances": [],
+          "preBalances": [250000000, 13693160, 1, 833120],
+          "preTokenBalances": [],
+          "rewards": [],
+          "status": {
+            "Ok": null
+          }
+        },
+        "slot": 497202960,
+        "transaction": {
+          "message": {
+            "accountKeys": [
+              {
+                "pubkey": "3PiWQaPdZwHhLJyhCF5Zz53NezmMtjSRMyzTMWU8zmdy",
+                "signer": true,
+                "source": "transaction",
+                "writable": true
+              },
+              {
+                "pubkey": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                "signer": false,
+                "source": "transaction",
+                "writable": true
+              },
+              {
+                "pubkey": "11111111111111111111111111111111",
+                "signer": false,
+                "source": "transaction",
+                "writable": false
+              },
+              {
+                "pubkey": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+                "signer": false,
+                "source": "transaction",
+                "writable": false
+              }
+            ],
+            "instructions": [
+              {
+                "accounts": [
+                  "3PiWQaPdZwHhLJyhCF5Zz53NezmMtjSRMyzTMWU8zmdy",
+                  "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                  "11111111111111111111111111111111"
+                ],
+                "data": "4B4CBrnz4ZcxG",
+                "programId": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+                "stackHeight": 1
+              }
+            ],
+            "recentBlockhash": "CHB2htKnocZ3mih94XnKAtvEfgigWxMmEPYJmooFo5su"
+          },
+          "signatures": [
+            "3VyRJzdFEs8s2h7rBVvNdaN5xjSKmBiaJaSXryGEVtbTCSUrNoEcG2NSQesKhUUKG6HvLGcNS2BLGJDYQ1rPkA3J"
+          ]
+        },
+        "transactionIndex": 28,
+        "version": "legacy"
+      }
+    },
+    {
+      "signature": "5PKjAjUofHpqujssudUAYc89wZhb4rsCPr6L25pXTMoAN7zv4UHtmwukEGdu9UonM8BnKn2ugZDYXvS4v6yhAuES",
+      "slot": 497203676,
+      "blockTime": 1789218835,
+      "feeLamports": 5000,
+      "instructionNames": ["settle_pot"],
+      "checks": {
+        "success": true,
+        "potIncluded": true,
+        "programInstruction": true,
+        "balanceConservation": true,
+        "settlementPotBalance": true,
+        "settlementPayouts": true
+      },
+      "expected": [
+        {
+          "recipients": ["43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU"],
+          "payoutEachLamports": 20000000,
+          "dustLamports": 0
+        }
+      ],
+      "balances": [
+        {
+          "address": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+          "feePayer": true,
+          "beforeLamports": 236296840,
+          "afterLamports": 256291840,
+          "deltaLamports": 19995000,
+          "deltaExcludingFeeLamports": 20000000
+        },
+        {
+          "address": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+          "feePayer": false,
+          "beforeLamports": 23693160,
+          "afterLamports": 3693160,
+          "deltaLamports": -20000000,
+          "deltaExcludingFeeLamports": -20000000
+        }
+      ],
+      "raw": {
+        "blockTime": 1789218835,
+        "meta": {
+          "computeUnitsConsumed": 5168,
+          "costUnits": 6538,
+          "err": null,
+          "fee": 5000,
+          "innerInstructions": [],
+          "logMessages": [
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb invoke [1]",
+            "Program log: Instruction: SettlePot",
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb consumed 5168 of 200000 compute units",
+            "Program EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb success"
+          ],
+          "postBalances": [256291840, 3693160, 833120],
+          "postTokenBalances": [],
+          "preBalances": [236296840, 23693160, 833120],
+          "preTokenBalances": [],
+          "rewards": [],
+          "status": {
+            "Ok": null
+          }
+        },
+        "slot": 497203676,
+        "transaction": {
+          "message": {
+            "accountKeys": [
+              {
+                "pubkey": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+                "signer": true,
+                "source": "transaction",
+                "writable": true
+              },
+              {
+                "pubkey": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                "signer": false,
+                "source": "transaction",
+                "writable": true
+              },
+              {
+                "pubkey": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+                "signer": false,
+                "source": "transaction",
+                "writable": false
+              }
+            ],
+            "instructions": [
+              {
+                "accounts": [
+                  "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+                  "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+                  "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU"
+                ],
+                "data": "2Y7kDTTu1gejr",
+                "programId": "EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb",
+                "stackHeight": 1
+              }
+            ],
+            "recentBlockhash": "DF1GhNSzojqKyder5SHKhJiePf2CWu6VCpUjULARL13d"
+          },
+          "signatures": [
+            "5PKjAjUofHpqujssudUAYc89wZhb4rsCPr6L25pXTMoAN7zv4UHtmwukEGdu9UonM8BnKn2ugZDYXvS4v6yhAuES"
+          ]
+        },
+        "transactionIndex": 42,
+        "version": "legacy"
+      }
+    }
+  ],
+  "finalBalanceSnapshot": {
+    "capturedAt": "2026-09-12T13:16:23.111Z",
+    "commitment": "finalized",
+    "contextSlot": 497204526,
+    "walletA": {
+      "address": "43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU",
+      "lamports": 256291840
+    },
+    "walletB": {
+      "address": "3PiWQaPdZwHhLJyhCF5Zz53NezmMtjSRMyzTMWU8zmdy",
+      "lamports": 239995000
+    },
+    "pot": {
+      "address": "EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB",
+      "lamports": 3693160
+    },
+    "funder": {
+      "address": "F6VRDFcvPVNmdaWcCeWkQFfJcZQBystcNgaMrp3kkX5t",
+      "lamports": 1117359960
+    }
+  },
+  "finalTransactionStatuses": [
+    {
+      "confirmationStatus": "finalized",
+      "confirmations": null,
+      "err": null,
+      "slot": 497202779,
+      "status": {
+        "Ok": null
+      }
+    },
+    {
+      "confirmationStatus": "finalized",
+      "confirmations": null,
+      "err": null,
+      "slot": 497202906,
+      "status": {
+        "Ok": null
+      }
+    },
+    {
+      "confirmationStatus": "finalized",
+      "confirmations": null,
+      "err": null,
+      "slot": 497202960,
+      "status": {
+        "Ok": null
+      }
+    },
+    {
+      "confirmationStatus": "finalized",
+      "confirmations": null,
+      "err": null,
+      "slot": 497203676,
+      "status": {
+        "Ok": null
+      }
+    }
+  ],
+  "totals": {
+    "startingWalletLamports": 500000000,
+    "stakesLamports": 20000000,
+    "payoutLamports": 20000000,
+    "transactionFeesLamports": 20000,
+    "finalWalletLamports": 496286840,
+    "retainedRentLamports": 3693160,
+    "divisionDustLamports": 0,
+    "accountedLamports": 500000000,
+    "allFourFinalized": true,
+    "funderAboveReadinessReserve": true
+  }
+}

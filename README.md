@@ -2,7 +2,7 @@
 
 A prototype where a trusted group stakes test SOL on whether someone completes a task. A named judge settles after the deadline, and winners receive the pot in one transaction.
 
-The program is deployed on Solana devnet. The complete two-browser flow has passed on a local Solana validator; the final devnet browser run is in progress. Run `npm run demo:check` for current addresses, balances, and readiness. The [browser verification record](docs/browser-verification.md) contains the observed payouts.
+The program is deployed on Solana devnet, and the complete two-browser demo has passed there: separate funded wallets, pot creation, opposite-side stakes, judge settlement after the deadline, and visible SOL payouts. The [browser verification record](docs/browser-verification.md) contains the balances and public transaction links. Local rehearsal and failure-recovery checks also passed.
 
 ## Setup
 
