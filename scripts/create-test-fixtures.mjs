@@ -41,6 +41,17 @@ const fixtures = [
     no: participants.slice(1, 2),
     size: 599,
   },
+  // A pot written by the program build that had no proof link or invite hash.
+  // Full, so its 599 bytes leave no room for those fields and the current
+  // layout cannot read it until `resize_pot` grows the account.
+  {
+    name: "pre-upgrade",
+    yes: participants.slice(0, 5),
+    no: participants.slice(5),
+    size: 599,
+    legacy: true,
+    task: "x".repeat(160),
+  },
 ];
 const manifest = {};
 await mkdir("target/test-fixtures", { recursive: true });
@@ -71,7 +82,7 @@ for (const [index, fixture] of fixtures.entries()) {
     creator,
     judge,
     identifier,
-    task: `Expired ${fixture.name} fixture`,
+    task: fixture.task ?? `Expired ${fixture.name} fixture`,
     stake: new BN(stake),
     deadline: new BN(1),
     created_at: new BN(0),
@@ -82,8 +93,20 @@ for (const [index, fixture] of fixtures.entries()) {
     proof_uri: "",
     access_hash: null,
   });
-  assert.ok(encoded.length <= data.length);
-  encoded.copy(data);
+  // The older layout ended at `outcome`: with an empty proof link and no invite
+  // hash, the current encoding is that layout plus five trailing zero bytes.
+  const bytes = fixture.legacy
+    ? encoded.subarray(0, encoded.length - 5)
+    : encoded;
+  // A pre-upgrade pot is only stranded when its account cannot hold the five
+  // bytes the two added fields need: a length prefix and an option tag.
+  assert.ok(
+    fixture.legacy
+      ? data.length - bytes.length < 5
+      : bytes.length <= data.length,
+    `The ${fixture.name} fixture is ${bytes.length} bytes in ${data.length}.`,
+  );
+  bytes.copy(data);
   await writeFile(
     `target/test-fixtures/${fixture.name}.json`,
     JSON.stringify(
@@ -107,6 +130,8 @@ for (const [index, fixture] of fixtures.entries()) {
     rentReserve,
     donation,
     size: fixture.size,
+    yes: fixture.yes.map((key) => key.toBase58()),
+    no: fixture.no.map((key) => key.toBase58()),
   };
 }
 
@@ -115,5 +140,5 @@ await writeFile(
   JSON.stringify(manifest, null, 2) + "\n",
 );
 console.log(
-  `Prepared ${fixtures.length} expired local-validator pots for timeout refund tests.`,
+  `Prepared ${fixtures.length} expired local-validator pots for recovery tests.`,
 );

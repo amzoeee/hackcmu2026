@@ -66,6 +66,54 @@ pub mod accountability {
         Ok(())
     }
 
+    /// Grows a pot allocated before `proof_uri` and `access_hash` existed.
+    ///
+    /// Those pots were sized for the older layout, and a full one has no spare
+    /// byte for the two new fields, so it stops deserializing: it can no longer
+    /// be settled or refunded, and its stakes would be stranded. Anyone may pay
+    /// the rent difference to grow such a pot to the current layout. The added
+    /// bytes are zeroed, which reads back as an empty proof link and no invite
+    /// code.
+    pub fn resize_pot(ctx: Context<ResizePot>) -> Result<()> {
+        let pot = ctx.accounts.pot.to_account_info();
+        let current = {
+            let data = pot.try_borrow_data()?;
+            require!(
+                data.len() >= 8 && &data[..8] == Pot::DISCRIMINATOR,
+                AccountabilityError::NotAPot
+            );
+            // A pot already on the current layout needs nothing, so repeated or
+            // racing repairs succeed instead of confusing the caller.
+            if data.len() >= Pot::SPACE {
+                return Ok(());
+            }
+            data.len()
+        };
+
+        // The payer covers the rent the added bytes need. Taking it from the
+        // balance instead would raise the rent floor above the pot's own
+        // reserve and strand that much of the stakes.
+        let rent = Rent::get()?;
+        let reserve = rent.minimum_balance(Pot::SPACE);
+        let top_up = reserve
+            .saturating_sub(rent.minimum_balance(current))
+            .max(reserve.saturating_sub(pot.lamports()));
+        if top_up > 0 {
+            system_program::transfer(
+                CpiContext::new(
+                    ctx.accounts.system_program.to_account_info(),
+                    system_program::Transfer {
+                        from: ctx.accounts.payer.to_account_info(),
+                        to: pot.clone(),
+                    },
+                ),
+                top_up,
+            )?;
+        }
+        pot.resize(Pot::SPACE)?;
+        Ok(())
+    }
+
     /// The creator or any YES participant may link evidence until the pot is
     /// settled. Only the creator may replace a link that is already recorded, so
     /// one participant cannot swap another's evidence out from under the judge.
@@ -336,6 +384,18 @@ pub struct RefundPot<'info> {
 }
 
 #[derive(Accounts)]
+pub struct ResizePot<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// CHECK: A pre-upgrade pot cannot be deserialized, so it is read as raw
+    /// bytes. The owner constraint and the discriminator check in the handler
+    /// confirm the account is one of this program's pots.
+    #[account(mut, owner = crate::ID)]
+    pub pot: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct SubmitProof<'info> {
     pub submitter: Signer<'info>,
     #[account(mut)]
@@ -475,6 +535,8 @@ pub enum AccountabilityError {
     NameTooLong,
     #[msg("Only the creator may replace a proof link that is already recorded.")]
     ProofAlreadySubmitted,
+    #[msg("That account is not a pot.")]
+    NotAPot,
 }
 
 #[cfg(test)]

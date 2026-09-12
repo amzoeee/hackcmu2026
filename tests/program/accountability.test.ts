@@ -43,7 +43,14 @@ describe("accountability pots", () => {
     readFileSync("target/test-fixtures/manifest.json", "utf8"),
   ) as Record<
     string,
-    { pot: string; rentReserve: number; donation: number; size: number }
+    {
+      pot: string;
+      rentReserve: number;
+      donation: number;
+      size: number;
+      yes: string[];
+      no: string[];
+    }
   >;
   let identifier = 1;
 
@@ -205,6 +212,18 @@ describe("accountability pots", () => {
       [Buffer.from("profile"), wallet.toBuffer()],
       program.programId,
     )[0];
+  }
+
+  async function resizePot(payer: Keypair, pot: PublicKey) {
+    await program.methods
+      .resizePot()
+      .accountsPartial({
+        payer: payer.publicKey,
+        pot,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([payer])
+      .rpc();
   }
 
   async function setProfile(
@@ -1084,6 +1103,131 @@ describe("accountability pots", () => {
       await provider.connection.getAccountInfo(profileAddress(other.publicKey)),
       null,
     );
+  });
+
+  it("rescues a pre-upgrade pot so its stakes can still be refunded", async () => {
+    // scripts/create-test-fixtures.mjs writes a full pot in the layout that had
+    // no proof link or invite hash, and Anchor.toml loads it into the validator.
+    const fixture = fixtures["pre-upgrade"];
+    const pot = new PublicKey(fixture.pot);
+    const recipients = [...fixture.yes, ...fixture.no].map(
+      (key) => new PublicKey(key),
+    );
+    const caller = Keypair.generate();
+    await fund(caller);
+    const before = await provider.connection.getAccountInfo(pot);
+    assert.ok(before, "The validator must load the pre-upgrade pot fixture");
+    assert.equal(before.data.length, fixture.size);
+    assert.equal(
+      before.lamports,
+      fixture.rentReserve + recipients.length * STAKE + fixture.donation,
+    );
+
+    // Nothing can read a full pot in the old layout, so its ten stakes are
+    // stranded: neither the judge nor a stranger can move them.
+    await assert.rejects(program.account.pot.fetch(pot));
+    await rejectsProgramError(
+      refund(pot, caller, recipients),
+      "AccountDidNotDeserialize",
+    );
+
+    const callerBefore = await provider.connection.getBalance(caller.publicKey);
+    const reserve =
+      await provider.connection.getMinimumBalanceForRentExemption(POT_SIZE);
+    const rentDelta = reserve - fixture.rentReserve;
+    await resizePot(caller, pot);
+
+    // The caller pays for the added bytes; the stakes are untouched.
+    const grown = await provider.connection.getAccountInfo(pot);
+    assert.equal(grown?.data.length, POT_SIZE);
+    assert.equal(grown?.lamports, before.lamports + rentDelta);
+    assert.equal(
+      await provider.connection.getBalance(caller.publicKey),
+      callerBefore - rentDelta,
+    );
+
+    // The added bytes read as an empty proof link and no invite code, and
+    // everything recorded before the upgrade survives.
+    const rescued = await program.account.pot.fetch(pot);
+    assert.equal(rescued.proofUri, "");
+    assert.equal(rescued.accessHash, null);
+    assert.equal(rescued.settled, false);
+    assert.equal(rescued.stake.toNumber(), STAKE);
+    assert.deepEqual(
+      rescued.yesParticipants.map((key) => key.toBase58()),
+      fixture.yes,
+    );
+    assert.deepEqual(
+      rescued.noParticipants.map((key) => key.toBase58()),
+      fixture.no,
+    );
+
+    // Repairing an already current pot is free and changes nothing.
+    const repaired = await provider.connection.getBalance(caller.publicKey);
+    await resizePot(caller, pot);
+    assert.equal(
+      (await provider.connection.getAccountInfo(pot))?.data.length,
+      POT_SIZE,
+    );
+    assert.equal(
+      await provider.connection.getBalance(caller.publicKey),
+      repaired,
+    );
+
+    // The stakes come back exactly, with rent and the donation left behind.
+    const beforeRefunds = await Promise.all(
+      recipients.map((wallet) => provider.connection.getBalance(wallet)),
+    );
+    await refund(pot, caller, recipients);
+    for (const [index, wallet] of recipients.entries()) {
+      assert.equal(
+        await provider.connection.getBalance(wallet),
+        beforeRefunds[index] + STAKE,
+      );
+    }
+    assert.equal(
+      await provider.connection.getBalance(pot),
+      reserve + fixture.donation,
+    );
+    const refunded = await program.account.pot.fetch(pot);
+    assert.equal(refunded.settled, true);
+    assert.equal(refunded.outcome, null);
+  });
+
+  it("leaves current pots alone and refuses accounts that are not pots", async () => {
+    const creator = Keypair.generate();
+    const payer = Keypair.generate();
+    await Promise.all([fund(creator, 3 * LAMPORTS_PER_SOL), fund(payer)]);
+    const { pot, deadline } = await createPot(creator, creator.publicKey, 6);
+    const before = await provider.connection.getAccountInfo(pot);
+    assert.equal(before?.data.length, POT_SIZE);
+    const payerBefore = await provider.connection.getBalance(payer.publicKey);
+
+    await resizePot(payer, pot);
+    const after = await provider.connection.getAccountInfo(pot);
+    assert.equal(after?.data.length, POT_SIZE);
+    assert.equal(after?.lamports, before?.lamports);
+    assert.equal(
+      await provider.connection.getBalance(payer.publicKey),
+      payerBefore,
+    );
+
+    // A profile is owned by the program but is not a pot.
+    await setProfile(payer, "Ada");
+    await rejectsProgramError(
+      resizePot(payer, profileAddress(payer.publicKey)),
+      "NotAPot",
+    );
+    // A wallet is not owned by the program at all.
+    await rejectsProgramError(
+      resizePot(payer, creator.publicKey),
+      "ConstraintOwner",
+    );
+
+    // None of that disturbed the pot.
+    await waitForDeadline(deadline);
+    await settle(pot, creator, true, []);
+    assert.equal((await program.account.pot.fetch(pot)).settled, true);
   });
 
   it("settles an empty pot without a payout and rejects late joins", async () => {
