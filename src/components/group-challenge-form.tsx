@@ -18,6 +18,8 @@ import {
 import {
   checkGroupSubmission,
   encodeGroupTask,
+  groupTaskBytes,
+  MAX_GROUP_TASK_BYTES,
   packGroupTransactions,
   parseGroupTask,
   type GroupSubmission,
@@ -197,6 +199,9 @@ export function GroupChallengeForm({
     /* Show the estimate when the amount is valid. */
   }
   const estimatedFees = BigInt(count * 2 * 5_000);
+  const friendBytes = friends.map((friend) =>
+    groupTaskBytes(friend.participant, friend.task),
+  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -639,12 +644,10 @@ export function GroupChallengeForm({
                   />
                 </label>
                 <span
-                  className={`field-note ${new TextEncoder().encode(friend.task.trim()).length + 18 + (friend.participant.trim().length || 44) > 160 ? "field-error" : ""}`}
+                  className={`field-note ${friendBytes[index] > MAX_GROUP_TASK_BYTES ? "field-error" : ""}`}
                 >
-                  {new TextEncoder().encode(friend.task.trim()).length +
-                    18 +
-                    (friend.participant.trim().length || 44)}
-                  /160 bytes including the group tag.
+                  {friendBytes[index]}/{MAX_GROUP_TASK_BYTES} bytes including
+                  the group tag.
                 </span>
                 {friends.length > 2 ? (
                   <button

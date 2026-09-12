@@ -55,6 +55,30 @@ export async function checkGroupSubmission(
   return "expired";
 }
 
+/** Base58 keys run 32-44 characters; every group identifier is eight. */
+const MAX_ADDRESS_LENGTH = 44;
+const PLACEHOLDER_GROUP_ID = "0".repeat(8);
+
+function taggedTask(groupId: string, address: string, task: string) {
+  return `[group:${groupId}:${address}] ${task}`;
+}
+
+/**
+ * The encoded size of one friend's row. An address that does not parse yet
+ * counts as a full-length one, so the budget never reads lower than it will be.
+ */
+export function groupTaskBytes(participant: string, task: string) {
+  let address: string;
+  try {
+    address = new PublicKey(participant.trim()).toBase58();
+  } catch {
+    address = "1".repeat(MAX_ADDRESS_LENGTH);
+  }
+  return new TextEncoder().encode(
+    taggedTask(PLACEHOLDER_GROUP_ID, address, task.trim()),
+  ).length;
+}
+
 export function encodeGroupTask(
   groupId: string,
   participant: PublicKey,
@@ -66,7 +90,7 @@ export function encodeGroupTask(
     );
   }
   if (!task.trim()) throw new Error("Add a task for every friend.");
-  const tagged = `[group:${groupId}:${participant.toBase58()}] ${task.trim()}`;
+  const tagged = taggedTask(groupId, participant.toBase58(), task.trim());
   if (new TextEncoder().encode(tagged).length > MAX_GROUP_TASK_BYTES) {
     throw new Error(
       "Shorten this friend's task: its group tag and task must fit in 160 UTF-8 bytes.",

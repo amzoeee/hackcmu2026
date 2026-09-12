@@ -12,6 +12,7 @@ import idl from "../src/lib/anchor/generated/accountability.json";
 import {
   encodeGroupTask,
   checkGroupSubmission,
+  groupTaskBytes,
   parseGroupTask,
   packGroupTransactions,
 } from "../src/lib/group-challenge";
@@ -43,6 +44,24 @@ it("round-trips group tasks and enforces the complete UTF-8 byte budget", () => 
   assert.throws(
     () => encodeGroupTask("INVALID!", participant, "Task"),
     /identifier/,
+  );
+});
+
+it("never counts a friend's row lower than its encoded size", () => {
+  const address = participant.toBase58();
+  const task = "é".repeat(40);
+  assert.equal(
+    groupTaskBytes(address, task),
+    Buffer.byteLength(encodeGroupTask(groupId, participant, task)),
+  );
+  // A partly typed address must not read as cheaper than the finished one.
+  for (const partial of ["", " ", address.slice(0, 20), "not-a-key"]) {
+    assert.ok(groupTaskBytes(partial, task) >= groupTaskBytes(address, task));
+  }
+  // Trailing whitespace is trimmed before encoding, so it must not be counted.
+  assert.equal(
+    groupTaskBytes(` ${address} `, `  ${task}  `),
+    groupTaskBytes(address, task),
   );
 });
 
