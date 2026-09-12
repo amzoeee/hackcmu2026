@@ -8,6 +8,9 @@ declare_id!("EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb");
 const MAX_TASK_LENGTH: usize = 160;
 const MAX_PARTICIPANTS: usize = 10;
 
+#[constant]
+pub const SETTLEMENT_GRACE_SECONDS: i64 = 300;
+
 #[program]
 pub mod accountability {
     use super::*;
@@ -21,11 +24,23 @@ pub mod accountability {
         judge: Pubkey,
     ) -> Result<()> {
         require!(!task.trim().is_empty(), AccountabilityError::TaskRequired);
-        require!(task.len() <= MAX_TASK_LENGTH, AccountabilityError::TaskTooLong);
+        require!(
+            task.len() <= MAX_TASK_LENGTH,
+            AccountabilityError::TaskTooLong
+        );
         require!(stake > 0, AccountabilityError::InvalidStake);
 
         let now = Clock::get()?.unix_timestamp;
         require!(deadline > now, AccountabilityError::DeadlineMustBeFuture);
+        require!(
+            deadline.checked_add(SETTLEMENT_GRACE_SECONDS).is_some(),
+            AccountabilityError::InvalidDeadline
+        );
+        require_keys_neq!(
+            judge,
+            ctx.accounts.pot.key(),
+            AccountabilityError::InvalidJudge
+        );
 
         let pot = &mut ctx.accounts.pot;
         pot.creator = ctx.accounts.creator.key();
@@ -52,8 +67,11 @@ pub mod accountability {
             AccountabilityError::PotFull
         );
         require!(
-            !pot.yes_participants.contains(&ctx.accounts.participant.key())
-                && !pot.no_participants.contains(&ctx.accounts.participant.key()),
+            !pot.yes_participants
+                .contains(&ctx.accounts.participant.key())
+                && !pot
+                    .no_participants
+                    .contains(&ctx.accounts.participant.key()),
             AccountabilityError::AlreadyParticipating
         );
 
@@ -78,45 +96,122 @@ pub mod accountability {
     pub fn settle_pot(ctx: Context<SettlePot>, completed: bool) -> Result<()> {
         let pot = &mut ctx.accounts.pot;
         let now = Clock::get()?.unix_timestamp;
-        require_keys_eq!(pot.judge, ctx.accounts.judge.key(), AccountabilityError::UnauthorizedJudge);
-        require!(!pot.settled, AccountabilityError::PotSettled);
-        require!(now >= pot.deadline, AccountabilityError::DeadlineNotReached);
-
-        let winners = if completed {
-            &pot.yes_participants
-        } else {
-            &pot.no_participants
-        };
-        let everyone = [&pot.yes_participants[..], &pot.no_participants[..]].concat();
-        let recipients: &[Pubkey] = if winners.is_empty() { &everyone } else { winners };
-
-        require_eq!(
-            ctx.remaining_accounts.len(),
-            recipients.len(),
-            AccountabilityError::IncorrectRecipientCount
+        require_keys_eq!(
+            pot.judge,
+            ctx.accounts.judge.key(),
+            AccountabilityError::UnauthorizedJudge
         );
-        for (recipient_account, recipient) in ctx.remaining_accounts.iter().zip(recipients.iter()) {
-            require!(recipient_account.is_writable, AccountabilityError::RecipientNotWritable);
-            require_keys_eq!(recipient_account.key(), *recipient, AccountabilityError::InvalidPayoutRecipient);
-        }
+        require!(!pot.settled, AccountabilityError::PotSettled);
+        require_settlement_window(pot.deadline, now)?;
 
-        // Preserve rent for the actual allocation, including older larger pots, plus division dust.
-        let rent_reserve = Rent::get()?.minimum_balance(pot.to_account_info().data_len());
-        let available = pot.to_account_info().lamports().saturating_sub(rent_reserve);
-        if !recipients.is_empty() && available > 0 {
-            let payout = available / recipients.len() as u64;
-            if payout > 0 {
-                for recipient in ctx.remaining_accounts.iter() {
-                    **pot.to_account_info().try_borrow_mut_lamports()? -= payout;
-                    **recipient.try_borrow_mut_lamports()? += payout;
-                }
-            }
-        }
+        let everyone = [&pot.yes_participants[..], &pot.no_participants[..]].concat();
+        let unopposed = pot.yes_participants.is_empty() || pot.no_participants.is_empty();
+        let (recipients, payout) = if everyone.is_empty() {
+            (Vec::new(), 0)
+        } else if unopposed && completed {
+            (everyone, pot.stake)
+        } else if unopposed {
+            // An unopposed failed task forfeits the recorded stakes to the named judge.
+            let staked_pool = pot
+                .stake
+                .checked_mul(everyone.len() as u64)
+                .ok_or(error!(AccountabilityError::InsufficientPotBalance))?;
+            (vec![pot.judge], staked_pool)
+        } else {
+            let winners = if completed {
+                &pot.yes_participants
+            } else {
+                &pot.no_participants
+            };
+            let rent_reserve = Rent::get()?.minimum_balance(pot.to_account_info().data_len());
+            let available = pot
+                .to_account_info()
+                .lamports()
+                .saturating_sub(rent_reserve);
+            (winners.clone(), available / winners.len() as u64)
+        };
+        pay_recipients(pot, ctx.remaining_accounts, &recipients, payout)?;
 
         pot.settled = true;
         pot.outcome = Some(completed);
         Ok(())
     }
+
+    pub fn refund_pot(ctx: Context<RefundPot>) -> Result<()> {
+        let pot = &mut ctx.accounts.pot;
+        require!(!pot.settled, AccountabilityError::PotSettled);
+        require_refund_window(pot.deadline, Clock::get()?.unix_timestamp)?;
+
+        // Exact original stakes are returned; donations and any dust stay with the rent reserve.
+        let recipients = [&pot.yes_participants[..], &pot.no_participants[..]].concat();
+        pay_recipients(pot, ctx.remaining_accounts, &recipients, pot.stake)?;
+        pot.settled = true;
+        pot.outcome = None;
+        Ok(())
+    }
+}
+
+fn require_settlement_window(deadline: i64, now: i64) -> Result<()> {
+    require!(now >= deadline, AccountabilityError::DeadlineNotReached);
+    let refund_at = deadline
+        .checked_add(SETTLEMENT_GRACE_SECONDS)
+        .ok_or(error!(AccountabilityError::InvalidDeadline))?;
+    require!(
+        now < refund_at,
+        AccountabilityError::SettlementWindowExpired
+    );
+    Ok(())
+}
+
+fn require_refund_window(deadline: i64, now: i64) -> Result<()> {
+    let refund_at = deadline
+        .checked_add(SETTLEMENT_GRACE_SECONDS)
+        .ok_or(error!(AccountabilityError::InvalidDeadline))?;
+    require!(now >= refund_at, AccountabilityError::RefundNotAvailable);
+    Ok(())
+}
+
+fn pay_recipients(
+    pot: &Account<'_, Pot>,
+    recipient_accounts: &[AccountInfo<'_>],
+    recipients: &[Pubkey],
+    payout: u64,
+) -> Result<()> {
+    require_eq!(
+        recipient_accounts.len(),
+        recipients.len(),
+        AccountabilityError::IncorrectRecipientCount
+    );
+    for (account, recipient) in recipient_accounts.iter().zip(recipients.iter()) {
+        require!(
+            account.is_writable,
+            AccountabilityError::RecipientNotWritable
+        );
+        require_keys_eq!(
+            account.key(),
+            *recipient,
+            AccountabilityError::InvalidPayoutRecipient
+        );
+    }
+
+    // Use the actual allocation so older, larger accounts also retain their full rent reserve.
+    let rent_reserve = Rent::get()?.minimum_balance(pot.to_account_info().data_len());
+    let available = pot
+        .to_account_info()
+        .lamports()
+        .saturating_sub(rent_reserve);
+    let total_payout = payout
+        .checked_mul(recipients.len() as u64)
+        .ok_or(error!(AccountabilityError::InsufficientPotBalance))?;
+    require!(
+        total_payout <= available,
+        AccountabilityError::InsufficientPotBalance
+    );
+    for account in recipient_accounts {
+        **pot.to_account_info().try_borrow_mut_lamports()? -= payout;
+        **account.try_borrow_mut_lamports()? += payout;
+    }
+    Ok(())
 }
 
 #[derive(Accounts)]
@@ -152,6 +247,14 @@ pub struct SettlePot<'info> {
     pub pot: Account<'info, Pot>,
 }
 
+#[derive(Accounts)]
+pub struct RefundPot<'info> {
+    #[account(mut)]
+    pub caller: Signer<'info>,
+    #[account(mut)]
+    pub pot: Account<'info, Pot>,
+}
+
 #[account]
 pub struct Pot {
     pub creator: Pubkey,
@@ -169,8 +272,8 @@ pub struct Pot {
 
 impl Pot {
     // Both vector length prefixes are stored, but their combined capacity is ten wallets.
-    pub const SPACE: usize = 8 + 32 + 32 + 8 + 4 + MAX_TASK_LENGTH + 8 + 8 + 8
-        + 4 + 4 + (32 * MAX_PARTICIPANTS) + 1 + 2;
+    pub const SPACE: usize =
+        8 + 32 + 32 + 8 + 4 + MAX_TASK_LENGTH + 8 + 8 + 8 + 4 + 4 + (32 * MAX_PARTICIPANTS) + 1 + 2;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
@@ -207,4 +310,78 @@ pub enum AccountabilityError {
     RecipientNotWritable,
     #[msg("Payout recipients must exactly match the recorded participants.")]
     InvalidPayoutRecipient,
+    #[msg("The judge's settlement window has expired. Anyone may refund this pot.")]
+    SettlementWindowExpired,
+    #[msg("Refunds are available five minutes after the deadline.")]
+    RefundNotAvailable,
+    #[msg("The deadline is too large to allow a settlement grace window.")]
+    InvalidDeadline,
+    #[msg("The pot account cannot be its own judge.")]
+    InvalidJudge,
+    #[msg("The pot cannot pay the recorded stakes while preserving rent.")]
+    InsufficientPotBalance,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_error(result: Result<()>, expected_name: &str) {
+        match result.unwrap_err() {
+            anchor_lang::error::Error::AnchorError(error) => {
+                assert_eq!(error.error_name, expected_name);
+            }
+            other => panic!("Expected {expected_name}, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn deadline_and_refund_cutoff_have_no_overlap_or_gap() {
+        let deadline = 1_000;
+        assert_error(
+            require_settlement_window(deadline, 999),
+            "DeadlineNotReached",
+        );
+        assert_error(require_refund_window(deadline, 999), "RefundNotAvailable");
+
+        for now in [deadline, deadline + SETTLEMENT_GRACE_SECONDS - 1] {
+            assert!(require_settlement_window(deadline, now).is_ok());
+            assert_error(require_refund_window(deadline, now), "RefundNotAvailable");
+        }
+
+        // At the exact cutoff, only the permissionless refund path is available.
+        for now in [
+            deadline + SETTLEMENT_GRACE_SECONDS,
+            deadline + SETTLEMENT_GRACE_SECONDS + 1,
+        ] {
+            assert_error(
+                require_settlement_window(deadline, now),
+                "SettlementWindowExpired",
+            );
+            assert!(require_refund_window(deadline, now).is_ok());
+        }
+    }
+
+    #[test]
+    fn grace_window_handles_integer_boundary_without_wrapping() {
+        let last_valid_deadline = i64::MAX - SETTLEMENT_GRACE_SECONDS;
+        assert!(require_settlement_window(last_valid_deadline, i64::MAX - 1).is_ok());
+        assert_error(
+            require_refund_window(last_valid_deadline, i64::MAX - 1),
+            "RefundNotAvailable",
+        );
+        assert_error(
+            require_settlement_window(last_valid_deadline, i64::MAX),
+            "SettlementWindowExpired",
+        );
+        assert!(require_refund_window(last_valid_deadline, i64::MAX).is_ok());
+
+        for deadline in [last_valid_deadline + 1, i64::MAX] {
+            assert_error(
+                require_settlement_window(deadline, i64::MAX),
+                "InvalidDeadline",
+            );
+            assert_error(require_refund_window(deadline, i64::MAX), "InvalidDeadline");
+        }
+    }
 }

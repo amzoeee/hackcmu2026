@@ -15,7 +15,7 @@ import {
 import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { useMemo, type ReactNode } from "react";
 import { SOLANA_NETWORK, SOLANA_RPC_URL, SOLANA_WS_URL } from "@/lib/solana";
-import { SolaraApp } from "./solara-app";
+import { FinanceYourResponsibilitiesApp } from "./finance-your-responsibilities-app";
 
 export function PrivyWalletProvider({
   appId,
@@ -117,7 +117,7 @@ export function PrivyWalletExperience({
     embeddedWallet?.address || adapterWallet.publicKey?.toBase58();
 
   return (
-    <SolaraApp
+    <FinanceYourResponsibilitiesApp
       connection={connection}
       wallet={anchorWallet}
       address={address}

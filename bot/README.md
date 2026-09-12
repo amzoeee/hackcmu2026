@@ -68,12 +68,12 @@ npm start
 The bot logs its program ID and RPC host, connects to Discord, and reads the pots once to seed the known set without posting. Afterwards it reads every `POLL_INTERVAL_MS` and posts:
 
 - **New pot** with the task, stake, deadline, judge, and the app link.
-- **Settled** with the outcome and either the winner count and per-winner payout or the refund.
+- **Settled** with the outcome and either the winner count and per-winner payout, the stakes returned, or the pool forfeited to the judge. A settled pot with no outcome is a timeout refund.
 
 Restarting the bot never re-announces existing pots because the first read after startup only seeds. Announcements that fail to post are retried on the next poll.
 
-- `/pots [filter]` lists pots newest first with the task, stake, deadline as a relative Discord timestamp, YES/NO counts, status (active, closed awaiting judge, or settled with its outcome), and the app link. `filter` is `active`, `settled`, or `all`.
-- `/pot <address>` shows one pot: participants per side, judge, outcome, and the payout computed like the app (the pool is the stake times every participant, split equally across the winning side; everyone is refunded when that side is empty; an empty pot pays nothing). It accepts the address or the link from the app's **Share** button.
+- `/pots [filter]` lists pots newest first with the task, stake, deadline as a relative Discord timestamp, YES/NO counts, status (active, closed awaiting judge, closed with a refund available, or settled with its outcome), and the app link. `filter` is `active`, `settled`, or `all`.
+- `/pot <address>` shows one pot: participants per side, judge, outcome, and the payout computed like the program. With both sides present the pool splits equally across the winning side. An unopposed pot returns exact stakes when judged complete and forfeits the whole pool to the judge when judged incomplete. A pot settled after the judge's window returns exact stakes with no verdict, and an empty pot pays nothing. It accepts the address or the link from the app's **Share** button.
 
 ## How it reads the chain
 
@@ -87,4 +87,4 @@ npm test            # node --test with fixture pots; no network
 npm run check       # both
 ```
 
-The tests cover message formatting for active, closed, settled, one-sided refund, and empty pots; the payout math including division dust; the seen-set logic that seeds silently and then announces only new and newly settled pots; poll recovery after failed reads and failed posts; the command handlers; the read cache; and configuration parsing. The repository's root `prettier` configuration formats this directory.
+The tests cover message formatting for active, closed, refundable, settled, unopposed forfeiture, unopposed and timeout refund, and empty pots; the payout math including division dust; the seen-set logic that seeds silently and then announces only new and newly settled pots; poll recovery after failed reads and failed posts; the command handlers; the read cache; and configuration parsing. The repository's root `prettier` configuration formats this directory.

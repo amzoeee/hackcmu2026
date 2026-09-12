@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import { createRequire } from "node:module";
+import { Program } from "@coral-xyz/anchor";
 import {
   Connection,
   Keypair,
@@ -88,13 +89,37 @@ try {
   }
   console.log(`Deployer: ${deployer.toBase58()}`);
 
-  const [deployerBalance, program] = await Promise.all([
+  const [deployerBalance, program, deployedIdl] = await Promise.all([
     connection.getBalance(deployer),
     connection.getAccountInfo(new PublicKey(programId)),
+    Program.fetchIdl(new PublicKey(programId), { connection }).catch(
+      () => undefined,
+    ),
   ]);
   console.log(`Deployer balance: ${sol(deployerBalance)}`);
   if (program?.executable) {
     console.log("Program deployed: yes");
+    const recoveryRulesAvailable =
+      Array.isArray(deployedIdl?.instructions) &&
+      deployedIdl.instructions.some(({ name }) => name === "refund_pot") &&
+      Array.isArray(deployedIdl?.constants) &&
+      deployedIdl.constants.some(
+        ({ name, value }) =>
+          name === "SETTLEMENT_GRACE_SECONDS" && String(value) === "300",
+      );
+    if (recoveryRulesAvailable) {
+      console.log("Recovery IDL: refund_pot and five-minute grace verified");
+      console.log(
+        "This checks the published IDL's capabilities, not the deployed bytecode. Upgrade the program and IDL together.",
+      );
+    } else {
+      console.log(
+        deployedIdl === undefined
+          ? "Recovery IDL: could not be read. Check the RPC and try again."
+          : "Recovery upgrade: missing or incompatible deployed IDL. Run npm run anchor:deploy:devnet to upgrade the program and IDL.",
+      );
+      ready = false;
+    }
   } else {
     console.log("Program deployed: no");
     console.log("Fund the deployer, then run npm run anchor:deploy:devnet.");

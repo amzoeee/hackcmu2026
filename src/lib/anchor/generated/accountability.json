@@ -116,6 +116,31 @@
       ]
     },
     {
+      "name": "refund_pot",
+      "discriminator": [
+        43,
+        38,
+        238,
+        255,
+        48,
+        213,
+        224,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "caller",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pot",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "settle_pot",
       "discriminator": [
         120,
@@ -226,6 +251,31 @@
       "code": 6012,
       "name": "InvalidPayoutRecipient",
       "msg": "Payout recipients must exactly match the recorded participants."
+    },
+    {
+      "code": 6013,
+      "name": "SettlementWindowExpired",
+      "msg": "The judge's settlement window has expired. Anyone may refund this pot."
+    },
+    {
+      "code": 6014,
+      "name": "RefundNotAvailable",
+      "msg": "Refunds are available five minutes after the deadline."
+    },
+    {
+      "code": 6015,
+      "name": "InvalidDeadline",
+      "msg": "The deadline is too large to allow a settlement grace window."
+    },
+    {
+      "code": 6016,
+      "name": "InvalidJudge",
+      "msg": "The pot account cannot be its own judge."
+    },
+    {
+      "code": 6017,
+      "name": "InsufficientPotBalance",
+      "msg": "The pot cannot pay the recorded stakes while preserving rent."
     }
   ],
   "types": [
@@ -300,6 +350,13 @@
           }
         ]
       }
+    }
+  ],
+  "constants": [
+    {
+      "name": "SETTLEMENT_GRACE_SECONDS",
+      "type": "i64",
+      "value": "300"
     }
   ]
 }

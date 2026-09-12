@@ -3,6 +3,7 @@ import { Keypair, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { isSecretKeyBytes } from "./secret-key.mjs";
 import { DEMO_WALLETS_ENABLED, SOLANA_NETWORK } from "./solana";
 
+// Keep the original storage key so existing funded wallets survive the rename.
 const STORAGE_KEY = `solara.${SOLANA_NETWORK}.demo-wallet`;
 
 export function loadDemoKeypair() {

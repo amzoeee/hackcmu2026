@@ -47,8 +47,14 @@ export function describeStatus(status: PotStatus) {
       return status.full ? "Active · full" : "Active";
     case "closed":
       return "Closed · awaiting judge";
+    case "refundable":
+      return "Closed · judge window expired, refund available";
     case "settled":
-      return status.outcome ? "Settled · completed" : "Settled · not completed";
+      return status.outcome === null
+        ? "Settled · refunded, no verdict"
+        : status.outcome
+          ? "Settled · completed"
+          : "Settled · not completed";
   }
 }
 
@@ -65,12 +71,25 @@ export function describePayout(payout: Payout, mode: "settled" | "projected") {
         : "This pot is empty. It will settle without a payout.";
     case "refund": {
       const each = `${formatSol(payout.perParticipant)} SOL`;
-      if (mode === "settled") {
-        return payout.participants === 1
-          ? `No one chose ${payout.side}, so the only participant was refunded ${each}.`
-          : `No one chose ${payout.side}, so all ${payout.participants} participants were refunded ${each} each.`;
+      const who =
+        payout.participants === 1
+          ? "the only participant"
+          : `all ${payout.participants} participants`;
+      if (payout.reason === "timeout") {
+        return mode === "settled"
+          ? `The judge window expired, so ${who} got their original ${each} stake back, without a verdict.`
+          : `If no verdict arrives in time, ${who} would get their original ${each} stake back.`;
       }
-      return `No one chose ${payout.side}. Each of the ${plural(payout.participants, "participant")} would be refunded ${each}.`;
+      return mode === "settled"
+        ? `This pot was unopposed, so ${who} got their original ${each} stake back.`
+        : `This pot is unopposed, so ${who} would get their original ${each} stake back.`;
+    }
+    case "forfeit": {
+      const pool = `${formatSol(payout.pool)} SOL staked pool`;
+      const judge = `the judge (\`${shorten(payout.judge)}\`)`;
+      return mode === "settled"
+        ? `This pot was unopposed, so the whole ${pool} went to ${judge}.`
+        : `This pot is unopposed, so the whole ${pool} would go to ${judge}, including any stake the judge contributed.`;
     }
     case "winners": {
       const each = `${formatSol(payout.perWinner)} SOL`;
@@ -235,8 +254,10 @@ export function formatPotEmbed(
     .setFooter({ text: `Pot ${position + 1} of ${total} · ${pot.address}` });
 
   if (status.kind === "settled") {
-    embed.setColor(status.outcome ? 0x2e8b57 : 0xc0392b);
-  } else if (status.kind === "closed") {
+    embed.setColor(
+      status.outcome === null ? 0x6b7280 : status.outcome ? 0x2e8b57 : 0xc0392b,
+    );
+  } else if (status.kind === "closed" || status.kind === "refundable") {
     embed.setColor(0xd97706);
   } else {
     embed.setColor(0x2563eb);
@@ -286,11 +307,13 @@ export function formatNewPotAnnouncement(pot: Pot, context: FormatContext) {
 
 /** Posted when a known pot becomes settled. */
 export function formatSettledAnnouncement(pot: Pot, context: FormatContext) {
-  const completed = pot.outcome === true;
-  const payout = computePayout(pot, completed);
-  const outcome = completed
-    ? "Completed (YES wins)"
-    : "Not completed (NO wins)";
+  const payout = computePayout(pot, pot.outcome);
+  const outcome =
+    pot.outcome === null
+      ? "Refunded (the judge window expired, so no verdict was recorded)"
+      : pot.outcome
+        ? "Completed (YES wins)"
+        : "Not completed (NO wins)";
   return [
     `Settled: ${title(pot)} — ${outcome}`,
     describePayout(payout, "settled"),

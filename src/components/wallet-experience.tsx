@@ -15,7 +15,7 @@ import {
   loadDemoKeypair,
 } from "@/lib/demo-wallet";
 import { IS_LOCALNET, SOLANA_NETWORK } from "@/lib/solana";
-import { SolaraApp } from "./solara-app";
+import { FinanceYourResponsibilitiesApp } from "./finance-your-responsibilities-app";
 
 const PrivyWalletExperience = dynamic(() =>
   import("./embedded-wallet-experience").then(
@@ -58,6 +58,7 @@ export function EmbeddedWalletExperience() {
 }
 
 type DemoMode = "demo" | "external" | null;
+// Preserve existing wallet selection and sign-out preferences across the rename.
 const DEMO_MODE_KEY = `solara.${SOLANA_NETWORK}.wallet-mode`;
 
 export function DemoWalletExperience() {
@@ -141,7 +142,7 @@ export function DemoWalletExperience() {
   }
 
   return (
-    <SolaraApp
+    <FinanceYourResponsibilitiesApp
       connection={connection}
       wallet={wallet}
       address={address}

@@ -1,8 +1,22 @@
-# Solara — accountability staking
+# Finance your Responsibilities
 
 A prototype where a trusted group stakes test SOL on whether someone completes a task. A named judge settles after the deadline, and winners receive the pot in one transaction.
 
-The program is deployed on Solana devnet, and the complete two-browser demo has passed there: separate funded wallets, pot creation, opposite-side stakes, judge settlement after the deadline, and visible SOL payouts. The [browser verification record](docs/browser-verification.md) contains the balances and public transaction links. Local rehearsal and failure-recovery checks also passed.
+The program and matching IDL are deployed on Solana devnet. The production UI passed the two-browser create/join/payout flow and a three-wallet check of unopposed forfeitures, timeout refunds, and independent group verdicts. The [recovery and group verification record](docs/recovery-verification.md) contains public transaction links and balances; the [original browser verification](docs/browser-verification.md) records the earlier demo. Local rehearsal and automated failure-recovery checks also passed.
+
+## Settlement and recovery
+
+The judge has **five minutes after a pot's deadline** to give a verdict. With both YES and NO participants, the selected side splits the pool. An unopposed pot has different rules: **completed returns each original stake; not completed forfeits all recorded stakes to the named judge**, regardless of which side is populated. A judge who also participates can receive their own stake back. This is a trusted-group prototype; use a separate trusted judge when that incentive matters.
+
+At the end of the five-minute window, verdicts close and **any connected wallet can refund all stakes**, including for older unsettled pots. Timeout refunds record no verdict and return each participant's exact original stake. There is no automatic scheduler: someone must press **Refund all stakes** and pay the transaction fee. Rent and any unsolicited extra SOL remain in the pot; accounts are not closed. The account layout and program identity stay the same. Upgrading changes the rules for existing unsettled pots; historical settlements remain unchanged.
+
+The page shows unopposed warnings before creating or joining, a badge on unopposed pots, the refund unlock time, and a payout review before a judge's verdict. Historical failed unopposed settlements link to their on-chain history rather than assuming they used today's payout rule.
+
+## Group challenges
+
+**Group challenge** creates an independent pot for each friend's own task, with a common stake, deadline, and judge. The organizer pays rent and creation fees for every pot and automatically stakes **NO** in each. Each friend opens their pot and stakes **YES** from their own wallet; until then the pot is unopposed. Each pot receives its own verdict and payout.
+
+Groups use a small prefix in the existing task text, parsed and hidden by the page. The prefix includes the group ID and intended friend's wallet, counts toward the 160-byte task limit, and provides display grouping only; participation remains open on-chain. There is no new group account or program instruction. The organizer's group costs are shown before submission. Creates are packed into transactions by their actual serialized size; larger groups use sequential batches, followed by batches of the organizer's NO stakes. One approval per transaction is needed. Saved progress lets the organizer resume incomplete groups after checking on-chain state, without recreating confirmed pots.
 
 ## Setup
 
@@ -74,7 +88,7 @@ npm run anchor:deploy:devnet
 npm run demo:check
 ```
 
-The current optimized program needs roughly 0.9 devnet SOL to deploy. Allow about 1.5 SOL total if that wallet will also fund two participants. Deployment rebuilds the program and verifies its key, configuration, and generated client addresses first. The readiness check requires a configured host funder with at least 0.6 SOL in reserve because public faucet availability cannot be verified. Require `Demo ready: yes`, fund both participant wallets in advance, and repeat the two-profile flow above on devnet.
+The current optimized program needs roughly 0.9 devnet SOL to deploy. Allow about 1.5 SOL total if that wallet will also fund two participants. Deployment rebuilds the program and verifies its key, configuration, and generated client addresses first. It also checks existing program capacity and applies the cluster’s minimum allocation increase when a larger binary requires one. The readiness check requires a configured host funder with at least 0.6 SOL in reserve because public faucet availability cannot be verified. Require `Demo ready: yes`, fund both participant wallets in advance, and repeat the two-profile flow above on devnet.
 
 If an upload fails, inspect the existing buffer before retrying. Deployment accepts Solana CLI options after `--`, including `--use-rpc` and `--buffer <buffer-address>` to resume an existing upload.
 
@@ -110,10 +124,11 @@ Share the host's LAN URL printed by `npm run demo:check` and allow inbound port 
 ```sh
 npm run check       # Lint, standalone TypeScript check, production build
 npm test            # Build and test on a temporary local validator
+npm run test:offchain # Funding, RPC recovery, group tags, and transaction batching
 npm run tools:check # Verify the installed toolchain
 ```
 
-Program tests cover creation and exact UTF-8 limits, insufficient funds, duplicate/late/full-pot joins, judge and deadline restrictions, invalid payout recipients, payouts for both sides, one-sided refunds, empty pots, and exact rent/dust preservation. Maximum-size pots are tested with all ten wallets on either side and with mixed sides. Rejected operations are checked for unchanged balances and state. Browser verification covers the actual create/join/settle flow and recovery controls.
+Program tests cover creation and exact UTF-8 limits, insufficient funds, duplicate/late/full-pot joins, judge and deadline restrictions, invalid payout recipients, payouts for both sides, one-sided refunds and forfeitures, timeout recovery, empty pots, and exact rent/dust preservation. Aged account fixtures exercise recovery without waiting five minutes; the ordinary local validator tests still create and join live pots. Maximum-size pots are tested with all ten wallets on either side and with mixed sides. Rejected operations are checked for unchanged balances and state. Browser verification covers the actual create/join/settle flow and recovery controls.
 
 Funding endpoint tests also verify the actual devnet identity before faucet or host-key use, failed confirmations, repeat requests, and recovery after RPC failure. Run these alone with `node --import tsx --test tests/demo-funds.test.ts`.
 
@@ -121,11 +136,13 @@ GitHub checks each push and pull request with a clean install, frontend checks, 
 
 Keep the standalone TypeScript check: Next's built-in checker is disabled because this Next/TypeScript combination rejects valid compiler configuration output. Upstream wallet SDK dependencies still have npm audit findings; do not use forced dependency upgrades without validating wallet behavior.
 
+The app is named **Finance your Responsibilities**. The `solara.*` browser storage keys and `SOLARA_DEMO_FUNDER_KEYPAIR` environment variable retain their original identifiers so existing wallets, sign-out preferences, and funding configurations continue to work. The deployed `accountability` program identity is unchanged. Verification records preserve task text as it was recorded on-chain under the former name.
+
 ## Project map
 
 | Area                                        | Location                                                                     |
 | ------------------------------------------- | ---------------------------------------------------------------------------- |
-| One-page UI and transaction flow            | `src/components/solara-app.tsx`                                              |
+| One-page UI and transaction flow            | `src/components/finance-your-responsibilities-app.tsx`                       |
 | Wallet selection and providers              | `src/components/wallet-experience.tsx`, `src/components/wallet-provider.tsx` |
 | Browser demo keys and network configuration | `src/lib/demo-wallet.ts`, `src/lib/solana.ts`                                |
 | Test SOL funding endpoint                   | `src/app/api/demo-funds/route.ts`                                            |

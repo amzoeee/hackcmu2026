@@ -122,6 +122,31 @@ export type Accountability = {
       ]
     },
     {
+      "name": "refundPot",
+      "discriminator": [
+        43,
+        38,
+        238,
+        255,
+        48,
+        213,
+        224,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "caller",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pot",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "settlePot",
       "discriminator": [
         120,
@@ -232,6 +257,31 @@ export type Accountability = {
       "code": 6012,
       "name": "invalidPayoutRecipient",
       "msg": "Payout recipients must exactly match the recorded participants."
+    },
+    {
+      "code": 6013,
+      "name": "settlementWindowExpired",
+      "msg": "The judge's settlement window has expired. Anyone may refund this pot."
+    },
+    {
+      "code": 6014,
+      "name": "refundNotAvailable",
+      "msg": "Refunds are available five minutes after the deadline."
+    },
+    {
+      "code": 6015,
+      "name": "invalidDeadline",
+      "msg": "The deadline is too large to allow a settlement grace window."
+    },
+    {
+      "code": 6016,
+      "name": "invalidJudge",
+      "msg": "The pot account cannot be its own judge."
+    },
+    {
+      "code": 6017,
+      "name": "insufficientPotBalance",
+      "msg": "The pot cannot pay the recorded stakes while preserving rent."
     }
   ],
   "types": [
@@ -306,6 +356,13 @@ export type Accountability = {
           }
         ]
       }
+    }
+  ],
+  "constants": [
+    {
+      "name": "settlementGraceSeconds",
+      "type": "i64",
+      "value": "300"
     }
   ]
 };
