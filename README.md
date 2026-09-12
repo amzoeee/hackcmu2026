@@ -2,15 +2,15 @@
 
 A devnet app for staking test SOL on whether someone completes a task.
 
-**What works now:** create a pot, join YES or NO, and have the named judge settle it after the deadline. Payouts, refunds when the winning side is empty, and rent preservation are enforced on-chain and covered by local-validator tests.
+**What works now:** create a pot, join YES or NO, and have the named judge settle it after the deadline. Payouts, refunds when the winning side is empty, and rent preservation are enforced on-chain. Pot state and balances refresh automatically across multiple browsers.
 
-The app supports passwordless email/Google onboarding through an optional Privy embedded wallet. Users who already have a Solana wallet can still connect it directly.
+Without any account configuration, each browser profile gets its own persistent, devnet-only demo wallet and can request test SOL in the page. The app also supports passwordless email/Google onboarding through optional Privy configuration, and users can connect an existing Solana wallet.
 
 ## 1. Install these first
 
 - **Node.js 24 LTS**, which includes **npm**. Download it from [nodejs.org](https://nodejs.org/). Node 22 or newer is supported; this scaffold was tested with Node 26.
 - **On a Mac: Xcode Command Line Tools.** Open Terminal and run `xcode-select --install`. If it says they are already installed, you are ready.
-- **For embedded wallet onboarding:** create a Privy app and enable email and Google login. Add its public app ID to `.env.local` as `NEXT_PUBLIC_PRIVY_APP_ID`. A wallet is then created automatically after login.
+- **Optional Privy onboarding:** create a Privy app and enable email and Google login. Add its public app ID to `.env.local` as `NEXT_PUBLIC_PRIVY_APP_ID`. A wallet is then created automatically after login. Add every LAN origin you plan to use to the Privy app's allowed origins.
 - **For the fallback wallet connection:** install [Phantom](https://phantom.com/) or [Solflare](https://solflare.com/) and switch it to **Solana devnet**.
 
 You do **not** need to install Rust, Solana, or Anchor manually. The setup command below installs them for this project.
@@ -53,11 +53,30 @@ npm run dev
 
 Open **[http://localhost:3000](http://localhost:3000)** in your browser. Leave the terminal running. Press **Ctrl+C** in that terminal to stop the server.
 
-With `NEXT_PUBLIC_PRIVY_APP_ID` configured, click **Continue with email or Google**. The signed-in user receives an embedded Solana wallet; no extension or seed phrase is required. Without that variable, the app presents the browser-wallet fallback.
+Without `NEXT_PUBLIC_PRIVY_APP_ID`, click **Start demo**. Solara creates a devnet-only key in that browser and asks the devnet faucet for 1 SOL. The key persists in local storage, so separate browser profiles and LAN devices behave as separate users. No extension, account, or seed phrase is required. **Use wallet extension** remains available as a secondary path.
 
-The embedded wallet still needs devnet SOL to create accounts or stake. Fund it from a faucet during development. Sponsoring transaction fees or distributing welcome test SOL from a protected server wallet is a separate production concern; never put that private key in the browser.
+If the public faucet is rate-limited, fund `.wallets/deployer.json` and set `SOLARA_DEMO_FUNDER_KEYPAIR=.wallets/deployer.json` in `.env.local`. The server will transfer 1 devnet SOL to low-balance demo wallets. This route is hard-gated to devnet, and the private key stays on the host. Never configure it with a mainnet keypair.
 
-No environment file is required. The app uses the public devnet RPC by default. If you later need a different devnet RPC, copy `.env.example` to `.env.local`, change `NEXT_PUBLIC_SOLANA_RPC_URL`, and restart the server. Never put a private key in that file.
+No environment file is required. The app uses the public devnet RPC by default. If you later need a different devnet RPC, copy `.env.example` to `.env.local`, change `NEXT_PUBLIC_SOLANA_RPC_URL` and `NEXT_PUBLIC_SOLANA_WS_URL`, and restart the server. A keypair path is safe to put there because `.env.local` is ignored; never put the private-key contents in a `NEXT_PUBLIC_` variable.
+
+## Run with multiple people on the LAN
+
+Start a development server that listens on every network interface:
+
+```sh
+npm run dev:lan
+```
+
+Find the host computer's LAN address, then have each participant open `http://HOST_IP:3000`. For example, a host at `192.168.1.24` shares `http://192.168.1.24:3000`. Allow inbound TCP port 3000 in the host firewall if prompted.
+
+For a steadier production-mode presentation:
+
+```sh
+npm run build
+npm run start:lan
+```
+
+Use a separate browser profile or device for each participant. Wallets are scoped to browser storage; two ordinary tabs in one profile intentionally use the same demo wallet.
 
 ## 4. Run the checks and tests
 
@@ -71,7 +90,7 @@ npm run check
 npm test
 ```
 
-**`npm test` starts and stops its own local validator.** It tests pot creation, duplicate and late joins, unauthorized and early settlement, recipient validation, winning payouts, one-sided refunds, repeated settlement, and empty pots.
+**`npm test` starts and stops its own local validator.** It tests pot creation, duplicate, late, and full-pot joins, unauthorized and early settlement, recipient validation, YES and NO winning payouts, one-sided refunds, repeated settlement, empty pots, and rent/dust preservation.
 
 Other useful commands:
 

@@ -20,18 +20,20 @@ Out of scope: peer voting, USDC/SPL tokens, variable stakes, automated settlemen
 
 ## Current implementation status
 
-The active work is on `feat/embedded-wallet-pots`. Keep using focused feature branches and make a commit after each coherent change. Update this section whenever the delivery state, operational prerequisites, or main code paths change.
+The active work is on `feat/lan-multi-user-demo`. Keep using focused feature branches and make a commit after each coherent change. Update this section whenever the delivery state, operational prerequisites, or main code paths change.
 
 - The Anchor program implements `create_pot`, `join_pot`, and `settle_pot` in `programs/accountability/src/lib.rs`.
 - Pots are PDAs derived from `['pot', creator, identifier]`. Each account stores its creator, judge, task (160-character maximum), fixed stake, deadline, creation time, YES/NO wallet lists, and settlement outcome. It has room for 10 total participants.
 - Joins transfer native SOL into the program-owned pot account. Settlement validates the ordered remaining accounts against recorded recipients, pays the selected side equally, refunds everyone if the selected side is empty, and preserves account rent plus any division dust.
-- `src/components/solara-app.tsx` is the live page: it reads every pot directly from the program, including before login, and refreshes pots and balances after confirmed transactions.
-- `src/components/wallet-experience.tsx` selects the signer path. With `NEXT_PUBLIC_PRIVY_APP_ID`, users sign in with Privy email/Google and receive an embedded Solana wallet. Without it, the app falls back to the existing browser-wallet adapter.
+- `src/components/solara-app.tsx` is the live page: it reads every pot directly from the program, including before login, refreshes pots and balances after confirmed transactions, and polls them every eight seconds so separate LAN clients converge without manual refreshes.
+- `src/components/wallet-experience.tsx` selects the signer path. With `NEXT_PUBLIC_PRIVY_APP_ID`, users sign in with Privy email/Google and receive an embedded Solana wallet. Without it, each browser profile gets a persistent, devnet-only demo key stored in that browser; an extension remains available as a secondary option.
+- `src/app/api/demo-funds/route.ts` gives a demo wallet 1 devnet SOL when its balance is low. It uses the public devnet faucet by default or a server-only keypair configured with `SOLARA_DEMO_FUNDER_KEYPAIR`. The route refuses to run unless `NEXT_PUBLIC_SOLANA_NETWORK=devnet`; never configure it with a mainnet keypair.
+- `npm run dev:lan` and `npm run start:lan` bind Next.js to `0.0.0.0` so separate browsers and devices on the same LAN can use one host.
 - The frontend is intentionally restrained: flat light surfaces, one blue action color, system fonts, crisp borders, and 8px-based spacing. Do not add gradients, glow, decorative shadows, oversized type, or rounded data pills.
 - The local tests currently cover creation, duplicate and late joins, early/unauthorized/repeated settlement, payout-recipient validation, a YES-side payout, one-sided refunds, and empty-pot settlement. The full-pot guard and a populated NO-side payout still need explicit test coverage before relying on the UI for the final demo.
 - `npm test` explicitly overrides Anchor's devnet provider with localnet. `npm run check` runs lint, standalone TypeScript checking, and the production build. Next's built-in checker is disabled in `next.config.ts` because Next 16.3 cannot parse TypeScript 5.9's valid `--showConfig` output; do not remove the standalone typecheck from `npm run check`.
 - The devnet program has not been deployed in this workspace. The configured deployer currently has 0 devnet SOL. Fund `.wallets/deployer.json` before running `npm run anchor:deploy:devnet`.
-- Embedded wallets remove the extension and seed-phrase setup for app users, but they do not create stake funds. For the demo, fund each embedded wallet with devnet SOL. Fee sponsorship and an automated welcome-funding service require a protected backend signer and are not implemented.
+- The local demo wallet removes extension, account, and seed-phrase setup and can request test SOL in the UI. Privy wallets still need to be funded separately. For a reliable presentation, fund `.wallets/deployer.json` and set `SOLARA_DEMO_FUNDER_KEYPAIR=.wallets/deployer.json`; otherwise the demo route depends on the rate-limited public faucet.
 
 ## Data model and behavior
 

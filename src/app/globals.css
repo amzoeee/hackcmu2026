@@ -30,6 +30,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .topbar { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--line); }
 .wordmark { color: var(--ink); font-size: 20px; font-weight: 760; letter-spacing: -0.04em; text-decoration: none; }
 .wallet-area { display: flex; align-items: center; justify-content: flex-end; gap: 16px; min-height: 40px; }
+.connect-actions { display: flex; align-items: center; gap: 8px; }
 .wallet-balance { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 650; }
 .wallet-address { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 
@@ -102,7 +103,7 @@ input:focus, textarea:focus { border-color: var(--accent); outline: 2px solid #d
 @media (max-width: 560px) {
   .app-shell { padding: 16px; }
   .topbar { align-items: flex-start; flex-direction: column; padding-bottom: 16px; }
-  .wallet-area { justify-content: flex-start; flex-wrap: wrap; gap: 8px 16px; }
+  .wallet-area, .connect-actions { justify-content: flex-start; flex-wrap: wrap; gap: 8px 16px; }
   .page-heading { padding: 40px 0 32px; }
   .form-grid, .pot-details { grid-template-columns: 1fr; }
   .pot-row { grid-template-columns: 1fr; gap: 24px; }
