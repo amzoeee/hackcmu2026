@@ -194,6 +194,7 @@ export function SolaraApp({
       : null;
   const potRequest = useRef(0);
   const balanceRequest = useRef(0);
+  const lastLinkedPot = useRef<string | null>(null);
   const [now, setNow] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
@@ -211,6 +212,12 @@ export function SolaraApp({
   const [filter, setFilter] = useState<"all" | "active" | "settled" | "mine">(
     "all",
   );
+  const [sharedPot, setSharedPot] = useState<{
+    address: string;
+    url: string;
+    copied: boolean;
+    local: boolean;
+  } | null>(null);
 
   const program = useMemo(
     () =>
@@ -223,6 +230,26 @@ export function SolaraApp({
   useEffect(() => {
     if (error) errorMessage.current?.scrollIntoView({ block: "center" });
   }, [error]);
+
+  useEffect(() => {
+    const scrollToPot = () => {
+      const id = window.location.hash.slice(1);
+      if (!id.startsWith("pot-") || lastLinkedPot.current === id) return;
+      const element = document.getElementById(id);
+      if (!element) return;
+      lastLinkedPot.current = id;
+      element.scrollIntoView({ block: "start" });
+      element.focus({ preventScroll: true });
+    };
+    const onHashChange = () => {
+      lastLinkedPot.current = null;
+      if (window.location.hash.startsWith("#pot-")) setFilter("all");
+      scrollToPot();
+    };
+    scrollToPot();
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [pots, filter]);
 
   const refreshPots = useCallback(
     async (showLoading = true) => {
@@ -379,6 +406,24 @@ export function SolaraApp({
       setNotice(`Wallet address: ${address}`);
     }
     setSignature(null);
+  }
+
+  async function sharePot(pot: Pot) {
+    const url = new URL(window.location.href);
+    url.hash = `pot-${pot.publicKey.toBase58()}`;
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      copied = true;
+    } catch {
+      // LAN pages may not have clipboard access; the inline field is copyable.
+    }
+    setSharedPot({
+      address: pot.publicKey.toBase58(),
+      url: url.toString(),
+      copied,
+      local: ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname),
+    });
   }
 
   async function requestFunds() {
@@ -783,6 +828,20 @@ export function SolaraApp({
               Creating pays account rent and a small network fee. You choose a
               side and add your stake separately.
             </p>
+            <details className="pot-rules">
+              <summary>Staking and payout rules</summary>
+              <p>
+                Each wallet can join one side once, before the deadline. All
+                participants stake the same amount, with at most 10 people per
+                pot.
+              </p>
+              <p>
+                Only the named judge can settle after the deadline. Winners
+                split the pool equally. If no one chose the winning side,
+                everyone gets their stake back. Network fees and account rent
+                are separate from the pool.
+              </p>
+            </details>
           </form>
         </section>
 
@@ -921,6 +980,8 @@ export function SolaraApp({
                   className={`pot-row ${pot.settled ? "pot-settled" : ""}`}
                   key={pot.publicKey.toBase58()}
                   id={`pot-${pot.publicKey.toBase58()}`}
+                  tabIndex={-1}
+                  aria-label={pot.task}
                 >
                   <div className="pot-main">
                     <div className="pot-title-line">
@@ -1128,14 +1189,76 @@ export function SolaraApp({
                       Joining is closed. Waiting for the named judge to settle.
                     </p>
                   ) : null}
-                  <a
-                    className="record-link"
-                    href={explorerUrl("address", pot.publicKey.toBase58())}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View on-chain record ↗
-                  </a>
+                  <details className="participants">
+                    <summary>Participants ({participantCount})</summary>
+                    {participantCount === 0 ? (
+                      <p>No one has staked yet.</p>
+                    ) : (
+                      <ul>
+                        {[
+                          ...pot.yesParticipants.map((person) => ({
+                            person,
+                            side: "YES",
+                          })),
+                          ...pot.noParticipants.map((person) => ({
+                            person,
+                            side: "NO",
+                          })),
+                        ].map(({ person, side }) => (
+                          <li key={person.toBase58()}>
+                            <strong>{side}</strong>
+                            <a
+                              href={explorerUrl("address", person.toBase58())}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={person.toBase58()}
+                            >
+                              {person.toBase58()}
+                              {person.toBase58() === address ? " (you)" : ""}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </details>
+                  <div className="pot-records">
+                    <a
+                      className="record-link"
+                      href={explorerUrl("address", pot.publicKey.toBase58())}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      View on-chain record ↗
+                    </a>
+                    <button
+                      className="text-button"
+                      type="button"
+                      onClick={() => void sharePot(pot)}
+                    >
+                      Share pot
+                    </button>
+                  </div>
+                  {sharedPot?.address === pot.publicKey.toBase58() ? (
+                    <div className="share-link">
+                      <label>
+                        Pot link
+                        <input
+                          type="url"
+                          readOnly
+                          value={sharedPot.url}
+                          onFocus={(event) => event.currentTarget.select()}
+                        />
+                      </label>
+                      <p>
+                        {sharedPot.copied
+                          ? "Copied to your clipboard."
+                          : "Select and copy this link."}{" "}
+                        {sharedPot.local
+                          ? "Open it in another browser profile on this computer. For other devices, open the host's LAN address before sharing."
+                          : "Anyone with this link can view the pot."}
+                      </p>
+                    </div>
+                  ) : null}
                 </article>
               );
             })}

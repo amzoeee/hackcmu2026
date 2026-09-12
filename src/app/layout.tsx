@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { SolanaWalletProvider } from "@/components/wallet-provider";
-import "@solana/wallet-adapter-react-ui/styles.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Accountability — SOL staking",
+  title: "Solara — accountability stakes",
   description:
-    "Stake SOL on a commitment with your group. A named judge decides the outcome.",
+    "Stake test SOL on a commitment with your group. A named judge settles the outcome after the deadline.",
 };
 
 export default function RootLayout({

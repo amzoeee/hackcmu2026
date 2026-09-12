@@ -4,10 +4,10 @@ import {
   ConnectionProvider,
   WalletProvider,
 } from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { SOLANA_NETWORK, SOLANA_RPC_URL, SOLANA_WS_URL } from "@/lib/solana";
+import { WalletChooserProvider } from "./wallet-chooser";
 
 // Wallet Standard discovers installed wallets (including Phantom and Solflare).
 const wallets: [] = [];
@@ -28,7 +28,7 @@ export function SolanaWalletProvider({ children }: { children: ReactNode }) {
         wallets={wallets}
         autoConnect={SOLANA_NETWORK === "devnet"}
       >
-        <WalletModalProvider>{children}</WalletModalProvider>
+        <WalletChooserProvider>{children}</WalletChooserProvider>
       </WalletProvider>
     </ConnectionProvider>
   );
