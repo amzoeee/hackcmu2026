@@ -87,7 +87,7 @@ npm test            # Build and test on a temporary local validator
 npm run tools:check # Verify the installed toolchain
 ```
 
-Program tests cover creation and exact UTF-8 limits, insufficient funds, duplicate/late/full-pot joins, judge and deadline restrictions, invalid payout recipients, payouts for both sides, one-sided refunds, empty pots, and exact rent/dust preservation. Rejected operations are checked for unchanged balances and state. Browser verification covers the actual create/join/settle flow and recovery controls.
+Program tests cover creation and exact UTF-8 limits, insufficient funds, duplicate/late/full-pot joins, judge and deadline restrictions, invalid payout recipients, payouts for both sides, one-sided refunds, empty pots, and exact rent/dust preservation. Maximum-size pots are tested with all ten wallets on either side and with mixed sides. Rejected operations are checked for unchanged balances and state. Browser verification covers the actual create/join/settle flow and recovery controls.
 
 Funding endpoint tests also verify the actual devnet identity before faucet or host-key use, failed confirmations, repeat requests, and recovery after RPC failure. Run these alone with `node --import tsx --test tests/demo-funds.test.ts`.
 
