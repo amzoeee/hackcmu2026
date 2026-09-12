@@ -2,7 +2,7 @@
 
 A prototype where a trusted group stakes test SOL on whether someone completes a task. A named judge settles after the deadline, and winners receive the pot in one transaction.
 
-The on-chain program and the complete two-browser flow have passed on a local Solana validator. **Devnet presentation verification is still pending:** the deployer needs test SOL before the program can be deployed. Run `npm run demo:check` for the current addresses, balances, and readiness. The [browser verification record](docs/browser-verification.md) contains the observed local payouts.
+The program is deployed on Solana devnet. The complete two-browser flow has passed on a local Solana validator; the final devnet browser run is in progress. Run `npm run demo:check` for current addresses, balances, and readiness. The [browser verification record](docs/browser-verification.md) contains the observed payouts.
 
 ## Setup
 
@@ -45,6 +45,16 @@ Browser keys survive a local restart, so use **Add test SOL** to fund restored w
 
 ## Run and present on devnet
 
+For a presentation with the funded deployer providing test SOL:
+
+```sh
+npm run demo:devnet -- --production
+```
+
+Open [http://127.0.0.1:3002](http://127.0.0.1:3002) in two browser profiles and follow the create, join, and settle steps above. This command verifies deployment and funding, builds with devnet settings, and serves only on this computer. It uses `.wallets/deployer.json` as the server-only funder and keeps its build separate from local rehearsals. Omit `-- --production` for development mode.
+
+For ordinary frontend development:
+
 ```sh
 npm run dev
 ```
@@ -65,6 +75,8 @@ npm run demo:check
 ```
 
 The current optimized program needs roughly 0.9 devnet SOL to deploy. Allow about 1.5 SOL total if that wallet will also fund two participants. Deployment rebuilds the program and verifies its key, configuration, and generated client addresses first. The readiness check requires a configured host funder with at least 0.6 SOL in reserve because public faucet availability cannot be verified. Require `Demo ready: yes`, fund both participant wallets in advance, and repeat the two-profile flow above on devnet.
+
+If an upload fails, inspect the existing buffer before retrying. Deployment accepts Solana CLI options after `--`, including `--use-rpc` and `--buffer <buffer-address>` to resume an existing upload.
 
 The [MLH Solana resources](https://www.mlh.com/partners/solana) link to the [official devnet faucet](https://faucet.solana.com/). Use the printed deployer address when funding deployment; local rehearsal SOL cannot be transferred to devnet. The faucet currently requires both GitHub sign-in and browser verification, even though the page describes GitHub as unlocking a higher limit. Its GitHub authorization requests read-only profile and email access.
 
