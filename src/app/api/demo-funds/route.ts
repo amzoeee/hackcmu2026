@@ -11,6 +11,7 @@ import {
 } from "@solana/web3.js";
 import {
   DEMO_WALLETS_ENABLED,
+  DEVNET_GENESIS,
   IS_LOCALNET,
   SOLANA_NETWORK,
   SOLANA_RPC_URL,
@@ -126,6 +127,29 @@ export async function POST(request: Request) {
       disableRetryOnRateLimit: true,
       wsEndpoint: SOLANA_WS_URL,
     });
+    if (!IS_LOCALNET) {
+      let genesis;
+      try {
+        genesis = await connection.getGenesisHash();
+      } catch {
+        return NextResponse.json(
+          {
+            error:
+              "Could not verify devnet. Check the RPC connection and try again.",
+          },
+          { status: 503 },
+        );
+      }
+      if (genesis !== DEVNET_GENESIS) {
+        return NextResponse.json(
+          {
+            error:
+              "The configured RPC is not Solana devnet. Funding was stopped.",
+          },
+          { status: 403 },
+        );
+      }
+    }
     const currentBalance = await connection.getBalance(recipient, "confirmed");
     if (currentBalance >= SUFFICIENT_BALANCE) {
       return NextResponse.json({
