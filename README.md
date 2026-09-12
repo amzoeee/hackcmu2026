@@ -33,7 +33,7 @@ What they do:
 
 | Command                | What it does                                                                                                                                      |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm ci`               | Installs the JavaScript dependencies from the lockfile: Next.js, React, TypeScript, wallet adapters, the Anchor client, and development tools.    |
+| `npm ci`               | Installs the JavaScript dependencies from the lockfile: Next.js, React, TypeScript, wallet adapters, the Anchor client, and development tools. `.npmrc` sets `legacy-peer-deps=true`, which npm needs because the Privy wallet SDK pulls in EVM connectors that pin an older `@solana/kit`. |
 | `npm run tools:setup`  | Installs Rust, rustfmt, Clippy, Solana CLI 2.3.0, and Anchor 0.32.1 into the ignored `.tools/` folder. Creates local development keys if missing. |
 | `npm run anchor:build` | Builds the Rust program and generates the TypeScript client files. Downloads the compatible Solana compiler tools on the first run.               |
 
