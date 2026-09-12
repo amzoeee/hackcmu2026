@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import {
+  fetchDecodablePots,
   getAccountabilityProgram,
   getReadOnlyAccountabilityProgram,
   getReadOnlyConnection,
@@ -272,7 +273,7 @@ export function FinanceYourResponsibilitiesApp({
         const [programAccount, accounts, genesis, deployedIdl] =
           await Promise.all([
             readConnection.getAccountInfo(readProgram.programId, "confirmed"),
-            readProgram.account.pot.all(),
+            fetchDecodablePots(readProgram),
             SOLANA_NETWORK === "devnet"
               ? readConnection.getGenesisHash()
               : Promise.resolve(null),

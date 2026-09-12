@@ -1,10 +1,16 @@
-import { AnchorProvider, Program, utils } from "@coral-xyz/anchor";
+import {
+  AnchorProvider,
+  Program,
+  utils,
+  type IdlAccounts,
+} from "@coral-xyz/anchor";
 import type { AnchorWallet } from "@solana/wallet-adapter-react";
 import {
   Connection,
   SendTransactionError,
   SystemProgram,
   VersionedTransaction,
+  type PublicKey,
 } from "@solana/web3.js";
 import { SOLANA_WS_URL } from "../solana";
 import idl from "./generated/accountability.json";
@@ -105,6 +111,46 @@ export function getAccountabilityProgram(
     }
   };
   return new Program<Accountability>(idl as Accountability, provider);
+}
+
+export type PotRecord = {
+  publicKey: PublicKey;
+  account: IdlAccounts<Accountability>["pot"];
+};
+
+/**
+ * Reads every pot like `program.account.pot.all()`, but skips accounts that
+ * do not decode with the current layout instead of failing the whole read.
+ */
+export async function fetchDecodablePots(
+  program: Program<Accountability>,
+): Promise<PotRecord[]> {
+  const discriminator = program.coder.accounts.memcmp("pot") as {
+    offset: number;
+    bytes: string;
+  };
+  const accounts = await program.provider.connection.getProgramAccounts(
+    program.programId,
+    { commitment: "confirmed", filters: [{ memcmp: discriminator }] },
+  );
+  const pots: PotRecord[] = [];
+  let skipped = 0;
+  for (const { pubkey, account } of accounts) {
+    try {
+      pots.push({
+        publicKey: pubkey,
+        account: program.coder.accounts.decode("pot", account.data),
+      });
+    } catch {
+      skipped += 1;
+    }
+  }
+  if (skipped > 0) {
+    console.warn(
+      `Skipped ${skipped} pot account${skipped === 1 ? "" : "s"} that cannot be decoded with the current program layout.`,
+    );
+  }
+  return pots;
 }
 
 /** A public account reader. It cannot sign, so it is safe to use before login. */
