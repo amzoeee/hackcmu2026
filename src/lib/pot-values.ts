@@ -1,7 +1,36 @@
 import type { BN } from "@coral-xyz/anchor";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 
 const ONE_SOL = BigInt(LAMPORTS_PER_SOL);
+
+// Pot::SPACE in the Anchor program, including the account discriminator.
+export const POT_ACCOUNT_BYTES = 599;
+
+const POT_SEED = new TextEncoder().encode("pot");
+
+type Identifier = BN | bigint | number | string;
+
+function identifierSeed(identifier: Identifier) {
+  const seed = new Uint8Array(8);
+  new DataView(seed.buffer).setBigUint64(
+    0,
+    typeof identifier === "string" ? BigInt(identifier) : asBigInt(identifier),
+    true,
+  );
+  return seed;
+}
+
+/** The single definition of the pot PDA; the program derives it the same way. */
+export function potAddress(
+  creator: PublicKey,
+  identifier: Identifier,
+  programId: PublicKey,
+) {
+  return PublicKey.findProgramAddressSync(
+    [POT_SEED, creator.toBytes(), identifierSeed(identifier)],
+    programId,
+  )[0];
+}
 
 export function asBigInt(value: BN | bigint | number) {
   return typeof value === "bigint"

@@ -29,6 +29,8 @@ import {
   deadlineFromNow,
   formatSol,
   parseSol,
+  potAddress,
+  POT_ACCOUNT_BYTES,
 } from "@/lib/pot-values";
 import { SOLANA_NETWORK, SOLANA_RPC_URL } from "@/lib/solana";
 
@@ -67,19 +69,6 @@ function transactionUrl(signature: string) {
       ? `custom&customUrl=${encodeURIComponent(SOLANA_RPC_URL)}`
       : SOLANA_NETWORK;
   return `https://explorer.solana.com/tx/${signature}?cluster=${cluster}`;
-}
-
-function potAddress(
-  organizer: PublicKey,
-  identifier: string,
-  programId: PublicKey,
-) {
-  const seed = new Uint8Array(8);
-  new DataView(seed.buffer).setBigUint64(0, BigInt(identifier), true);
-  return PublicKey.findProgramAddressSync(
-    [new TextEncoder().encode("pot"), organizer.toBytes(), seed],
-    programId,
-  )[0];
 }
 
 export function GroupChallengeForm({
@@ -171,9 +160,8 @@ export function GroupChallengeForm({
 
   useEffect(() => {
     let current = true;
-    // 599 bytes is the current Pot allocation, including its discriminator.
     void readConnection
-      .getMinimumBalanceForRentExemption(599)
+      .getMinimumBalanceForRentExemption(POT_ACCOUNT_BYTES)
       .then((value) => {
         if (current) setRent(value);
       })
@@ -400,7 +388,7 @@ export function GroupChallengeForm({
       const missingJoins = active.entries.filter((entry) => !entry.joined);
       showProgress("Checking the organizer's funding…");
       const [rentNow, balance] = await Promise.all([
-        readConnection.getMinimumBalanceForRentExemption(599),
+        readConnection.getMinimumBalanceForRentExemption(POT_ACCOUNT_BYTES),
         readConnection.getBalance(wallet.publicKey),
       ]);
       const reserve =

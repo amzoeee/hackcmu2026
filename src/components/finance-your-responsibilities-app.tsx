@@ -28,6 +28,7 @@ import {
   formatSol,
   parseSol,
   deadlineFromNow,
+  potAddress,
 } from "@/lib/pot-values";
 
 import { GroupChallengeForm } from "./group-challenge-form";
@@ -104,16 +105,6 @@ function timeRemaining(deadline: BN | bigint | number, now: number) {
   return minutes > 0
     ? `${minutes}m ${seconds % 60}s remaining`
     : `${seconds}s remaining`;
-}
-
-function identifierSeed(identifier: BN) {
-  const seed = new Uint8Array(8);
-  new DataView(seed.buffer).setBigUint64(
-    0,
-    BigInt(identifier.toString()),
-    true,
-  );
-  return seed;
 }
 
 function actionError(error: unknown) {
@@ -278,9 +269,10 @@ export function FinanceYourResponsibilitiesApp({
               : Promise.resolve(null),
             SOLANA_NETWORK === "devnet" && recoveryIdlVerified.current !== true
               ? // A failed IDL read must not discard pots that loaded correctly.
-                Program.fetchIdl(readProgram.programId, readProgram.provider).catch(
-                  () => undefined,
-                )
+                Program.fetchIdl(
+                  readProgram.programId,
+                  readProgram.provider,
+                ).catch(() => undefined)
               : Promise.resolve(undefined),
           ]);
         if (request !== potRequest.current) return;
@@ -297,11 +289,11 @@ export function FinanceYourResponsibilitiesApp({
             deployedIdl?.instructions.some(
               (instruction) => instruction.name === "refund_pot",
             ) &&
-              deployedIdl.constants?.some(
-                (constant) =>
-                  constant.name === "SETTLEMENT_GRACE_SECONDS" &&
-                  Number(constant.value) === SETTLEMENT_GRACE_SECONDS,
-              ),
+            deployedIdl.constants?.some(
+              (constant) =>
+                constant.name === "SETTLEMENT_GRACE_SECONDS" &&
+                Number(constant.value) === SETTLEMENT_GRACE_SECONDS,
+            ),
           );
         }
         const compatible = IS_LOCALNET || recoveryIdlVerified.current === true;
@@ -533,14 +525,7 @@ export function FinanceYourResponsibilitiesApp({
         );
       }
       const identifier = new BN(Date.now().toString());
-      const [pot] = PublicKey.findProgramAddressSync(
-        [
-          new TextEncoder().encode("pot"),
-          wallet.publicKey.toBytes(),
-          identifierSeed(identifier),
-        ],
-        program.programId,
-      );
+      const pot = potAddress(wallet.publicKey, identifier, program.programId);
       setPending("create");
       const txSignature = await program.methods
         .createPot(
