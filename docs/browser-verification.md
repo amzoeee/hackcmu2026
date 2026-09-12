@@ -28,7 +28,7 @@ A fresh rehearsal with the synchronized program key also exercised these cases t
 | Empty pot        |           0.23270288 |          0.23269788 | Only the settlement fee was charged                                       |
 | One-sided refund |           0.20540076 |          0.22539576 | The only participant recovered the 0.02 SOL stake less the settlement fee |
 
-The page also passed a 390px mobile layout check, filtered empty states, insufficient-funds recovery, and shorthand decimal stake entry. A deliberately mismatched devnet/local RPC configuration displayed an error, disabled creation, and rejected funding with HTTP 403. The extension chooser's labeled close controls and Escape dismissal were exercised; no extension wallet was installed for a signing test.
+The page also passed a 390px mobile layout check, filtered empty states, insufficient-funds recovery, and shorthand decimal stake entry. Sharing a pot exposed a copyable link; opening it in the second profile selected and focused the correct pot even through an active-only filter. Expanded participant records showed both wallets on their recorded sides. A deliberately mismatched devnet/local RPC configuration displayed an error, disabled creation, and rejected funding with HTTP 403. The extension chooser's labeled close controls and Escape dismissal were exercised; no extension wallet was installed for a signing test.
 
 ## Local ledger identifiers
 

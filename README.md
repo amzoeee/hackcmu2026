@@ -45,7 +45,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The public devnet RPC is the default; no environment file is required. **Start demo** creates a persistent wallet in that browser profile and requests 0.25 devnet SOL. Signing out preserves the key, and signing back in restores the same wallet. Two ordinary tabs in one profile share a wallet; use separate profiles or devices for separate participants.
 
-The page includes quick deadlines, pot filters, wallet-address copying, transaction links, and a payout review before settlement. Pot state comes directly from the program, including before login, and pots and balances refresh every eight seconds. Creating a pot pays account rent and a network fee; the creator stakes separately. Tasks are limited to **160 UTF-8 bytes**, and each pot allows at most 10 participants at one fixed stake.
+The page includes quick deadlines, pot filters, shareable pot links, participant lists, transaction links, and a payout review before settlement. Copy a wallet address from the header when naming another judge. Pot state comes directly from the program, including before login, and pots and balances refresh every eight seconds. Creating a pot pays account rent and a network fee; the creator stakes separately. Tasks are limited to **160 UTF-8 bytes**, and each pot allows at most 10 participants at one fixed stake.
 
 Before presenting:
 
