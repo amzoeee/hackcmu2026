@@ -51,9 +51,19 @@ Startup funding now completes before publishing a new wallet to the page. A fres
 
 A separate proxy withheld only blockhash preparation reads. Create and Join released the interface after fifteen seconds with no SOL moved. Restoring RPC allowed creation; a later stalled join crossed the deadline without submitting a stake. The empty pot then settled normally, changing its judge's balance from 0.24493508 to 0.24493008 SOL for the fee alone. The interface displayed clear preparation/retry guidance and cleared unrelated transaction links when wallet-copy or funding feedback appeared.
 
+A submission proxy forwarded a signed create transaction to the validator but withheld its response. The pot appeared once through polling. After sixty seconds, the interface released the pending controls, kept the signed transaction's link, and explained that the action may already have succeeded. Direct RPC inspection confirmed one successful creation and one fee. After restoring responses, the wallet joined the existing pot and settled the opposite side for a refund; its balance changed from 0.23493008 to 0.24492508 SOL. The review named the exact 0.01 SOL refund, and the final receipt matched it.
+
+Pot: `CeMX9WfT288eVtdrp3hHwixBreT23M2pwZRPPH6eAsSd`. Refund settlement: `FMpmgV9d7zdKw8VxBubivc5EvhNpmndyLrDHm5j5a6qJEy4qQoSLAieRorkaF4ivxrYSg2k9jWyEAgA6cZ7hywJ`.
+
+Two tabs sharing the same wallet submitted opposite-side joins before either tab refreshed. Both transactions landed in the same slot: YES transferred one 0.01 SOL stake, while NO failed with `AlreadyParticipating` and transferred no stake. The wallet paid two 0.000005 SOL fees, moving from 0.24479024 to 0.23478024 SOL. Both tabs converged to one YES participant, no NO participants, and a 0.01 SOL pool; the rejected tab displayed the reason.
+
+Pot: `89i8hMYaVj4uqgN6RXcbeeLvze7ziXvQFwrvR2YmWeZ9`. Successful join: `4rBNUk8QaNuC8Yag9uVfM6M1dSL9WxS3WzvnHacuzGEx8ov7WBoMYJeWZhkqZ3HSMkyqkmyPUbFDFiWRHhb7Hx6A`.
+
 ## Production build
 
 The compiled production app also passed the full two-profile flow on localnet with fresh browser wallets. Both began with 0.25 SOL. After creation and a YES stake, A held 0.23493008 SOL; B held 0.239995 SOL after joining NO. A settled Completed and finished with 0.25492508 SOL, receiving the 0.02 SOL pool less the settlement fee. Both profiles displayed the settled result automatically, and neither browser reported console warnings or errors during the flow.
+
+A repeat with the updated payout text verified that the review and winner receipt both identify the 0.02 SOL share as including the original stake. Sharing from a URL containing a query string produced a clean pot link without that query string and retained the local-sharing guidance.
 
 Opening the production devnet page through the host's HTTP LAN address verified browser-wallet creation, restoration after reload, and the manual address-copy fallback when clipboard access was unavailable. This check used the same computer and a disabled test funder; a second physical device and the full devnet staking flow remain unverified.
 
@@ -66,6 +76,12 @@ After ten 0.01 SOL stakes, every client showed **Full**, a 0.1 SOL pool, and the
 After the deadline, the judge reviewed and confirmed the five-winner payout. Each additional YES wallet moved from 0.239995 to 0.259995 SOL; each additional NO wallet remained at 0.239995 SOL. The judge's balance moved from 0.21986016 to 0.23985516 SOL, reflecting its 0.02 SOL payout less the settlement fee. All ten clients displayed the matching personal outcome automatically.
 
 Pot: `8aYL8hCsTWZyzyjqpoAkoHLbKfRFcB8918yk7ZjUE53T`. Settlement: `scUeSc7YFrHVP9277NcpT8TYqVEpDHTb8h4SzignJGsEJLimeBx1GCfSt1VnffN7TVU7QDGaVSgabNZ8ArPkMDF`.
+
+## Hour-long rehearsal
+
+The production server and two primary browser profiles stayed running for an hour while other pots were created and settled. Both original 0.01 SOL stakes remained recorded throughout. At the deadline, only the named judge received settlement controls. Completing the pot changed the judge's balance from 0.23985516 to 0.25985016 SOL, paying the 0.02 SOL pool less the 0.000005 SOL fee; the NO participant stayed at 0.22999 SOL. Both profiles showed the settled result automatically.
+
+Pot: `6DmcqiBT7QRLyH8keo3pgDhe1dA9pRQZNoAdHbU7MjDw`. Settlement: `4cz3LUQN2K8eqVJFuDAt8rEWcxFrs9TtvQtrsMENxZhdCizLKArmCqnjizK7jwu51gRpBMy5YNpTohGs58NZTpZx`.
 
 ## Original local ledger identifiers
 

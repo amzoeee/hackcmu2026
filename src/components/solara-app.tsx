@@ -154,9 +154,9 @@ function identifierSeed(identifier: BN) {
 
 function actionError(error: unknown) {
   if (error instanceof Error) {
-    const message = error.message;
+    const message = error.message || error.toString();
     const programMessage = message.match(/Error Message: ([^\n]+)/)?.[1];
-    if (programMessage) return programMessage;
+    if (programMessage) return programMessage.replace(/\.+$/, ".");
     if (/User rejected|User denied|rejected the request/i.test(message)) {
       return "The wallet request was cancelled. No action was taken.";
     }
@@ -457,11 +457,11 @@ export function SolaraApp({
       // Clipboard access requires HTTPS on LAN origins. Keep the address copyable.
       setNotice(`Wallet address: ${address}`);
     }
-    setSignature(null);
   }
 
   async function sharePot(pot: Pot) {
     const url = new URL(window.location.href);
+    url.search = "";
     url.hash = `pot-${pot.publicKey.toBase58()}`;
     let copied = false;
     try {
@@ -1027,6 +1027,9 @@ export function SolaraApp({
               const winners = pot.outcome
                 ? pot.yesParticipants
                 : pot.noParticipants;
+              const winnerPayout = winners.length
+                ? pool / BigInt(winners.length)
+                : 0n;
               const refunded =
                 pot.settled && participantCount > 0 && winners.length === 0;
               const won = pot.settled && (pot.outcome ? joinedYes : joinedNo);
@@ -1037,6 +1040,11 @@ export function SolaraApp({
               const selectedWinners = settlement?.completed
                 ? pot.yesParticipants
                 : pot.noParticipants;
+              const reviewRecipients =
+                selectedWinners.length || participantCount;
+              const reviewPayout = reviewRecipients
+                ? pool / BigInt(reviewRecipients)
+                : 0n;
               return (
                 <article
                   className={`pot-row ${pot.settled ? "pot-settled" : ""}`}
@@ -1122,7 +1130,7 @@ export function SolaraApp({
                           ? refunded
                             ? `Your ${formatSol(pot.stake)} SOL stake was refunded.`
                             : won
-                              ? `Your ${joinedYes ? "YES" : "NO"} side won. Your payout is in your wallet.`
+                              ? `Your ${joinedYes ? "YES" : "NO"} side won. Your share of the staked pool was ${formatSol(winnerPayout)} SOL, including your stake.`
                               : `You chose ${joinedYes ? "YES" : "NO"}. Your stake went to the winning side.`
                           : `You staked ${formatSol(pot.stake)} SOL on ${joinedYes ? "YES" : "NO"}.`}
                       </p>
@@ -1216,10 +1224,10 @@ export function SolaraApp({
                         {participantCount === 0
                           ? "This pot is empty. It will settle without a payout."
                           : selectedWinners.length === 0
-                            ? `No one chose ${settlement.completed ? "YES" : "NO"}. Every participant will receive their stake back.`
+                            ? `No one chose ${settlement.completed ? "YES" : "NO"}. Each participant will receive ${formatSol(reviewPayout)} SOL from the staked pool, refunding their original stake.`
                             : selectedWinners.length === 1
-                              ? `The ${settlement.completed ? "YES" : "NO"} participant will receive the ${formatSol(pool)} SOL staked pool.`
-                              : `${selectedWinners.length} ${settlement.completed ? "YES" : "NO"} participants will split the ${formatSol(pool)} SOL staked pool.`}{" "}
+                              ? `The ${settlement.completed ? "YES" : "NO"} participant will receive ${formatSol(reviewPayout)} SOL from the staked pool, including their original stake.`
+                              : `Each of the ${selectedWinners.length} ${settlement.completed ? "YES" : "NO"} participants will receive ${formatSol(reviewPayout)} SOL from the staked pool, including their original stake.`}{" "}
                         This decision is final.
                       </p>
                       <div className="button-group">

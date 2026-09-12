@@ -1,6 +1,11 @@
-import { AnchorProvider, Program } from "@coral-xyz/anchor";
+import { AnchorProvider, Program, utils } from "@coral-xyz/anchor";
 import type { AnchorWallet } from "@solana/wallet-adapter-react";
-import { Connection, SystemProgram } from "@solana/web3.js";
+import {
+  Connection,
+  SendTransactionError,
+  SystemProgram,
+  VersionedTransaction,
+} from "@solana/web3.js";
 import { SOLANA_WS_URL } from "../solana";
 import idl from "./generated/accountability.json";
 import type { Accountability } from "./generated/accountability";
@@ -23,7 +28,30 @@ export function getAccountabilityProgram(
   const transactionConnection = new Connection(connection.rpcEndpoint, {
     commitment: "confirmed",
     wsEndpoint: SOLANA_WS_URL,
+    disableRetryOnRateLimit: true,
+    fetch: (url, options) =>
+      fetch(url, { ...options, signal: AbortSignal.timeout(60_000) }),
   });
+  const sendRawTransaction = transactionConnection.sendRawTransaction.bind(
+    transactionConnection,
+  );
+  transactionConnection.sendRawTransaction = async (raw, options) => {
+    const signature = utils.bytes.bs58.encode(
+      VersionedTransaction.deserialize(Uint8Array.from(raw)).signatures[0],
+    );
+    try {
+      return await sendRawTransaction(raw, options);
+    } catch (cause) {
+      if (cause instanceof SendTransactionError) throw cause;
+      throw Object.assign(
+        new Error(
+          "The submission response was lost. This transaction may have succeeded. Check its status and refresh before trying again.",
+          { cause },
+        ),
+        { signature },
+      );
+    }
+  };
   const reader = getReadOnlyConnection(connection.rpcEndpoint);
   transactionConnection.getLatestBlockhash = async (...args) => {
     try {
@@ -36,12 +64,20 @@ export function getAccountabilityProgram(
     }
   };
   transactionConnection.getTransaction = async (...args) => {
-    try {
-      return await reader.getTransaction(...args);
-    } catch {
-      // Optional logs must not replace Anchor's known confirmation failure.
-      return null;
+    // Optional logs must not replace Anchor's known confirmation failure.
+    const failedTransaction = await reader
+      .getTransaction(...args)
+      .catch(() => null);
+    if (failedTransaction?.meta?.err && failedTransaction.meta.logMessages) {
+      // Anchor 0.32 still calls web3's obsolete positional error constructor.
+      throw new SendTransactionError({
+        action: "send",
+        signature: args[0],
+        transactionMessage: JSON.stringify(failedTransaction.meta.err),
+        logs: failedTransaction.meta.logMessages,
+      });
     }
+    return failedTransaction;
   };
   const provider = new AnchorProvider(transactionConnection, wallet, {
     commitment: "confirmed",
