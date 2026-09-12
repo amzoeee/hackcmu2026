@@ -3,6 +3,13 @@
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
+PROGRAM_KEY_MODE=--setup
+if [[ "${1:-}" == "--new-program" && $# -eq 1 ]]; then
+  PROGRAM_KEY_MODE=--new-program
+elif [[ $# -ne 0 ]]; then
+  echo 'Usage: npm run tools:setup [-- --new-program]' >&2
+  exit 1
+fi
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64) TOOL_TARGET=aarch64-apple-darwin ;;
   Darwin-x86_64) TOOL_TARGET=x86_64-apple-darwin ;;
@@ -29,10 +36,6 @@ fi
 if [[ ! -f .wallets/deployer.json ]]; then
   solana-keygen new --no-bip39-passphrase --silent --outfile .wallets/deployer.json
 fi
-if [[ ! -f target/deploy/accountability-keypair.json ]]; then
-  solana-keygen new --no-bip39-passphrase --silent --outfile target/deploy/accountability-keypair.json
-fi
-anchor keys sync
-anchor keys sync --provider.cluster devnet
 bash scripts/check-tools.sh
-echo 'Tools ready. Run npm run anchor:build to build the program and regenerate its client.'
+node scripts/ensure-program-key.mjs "$PROGRAM_KEY_MODE"
+echo 'Tools ready. Once the program key is ready, run npm run anchor:build to build the program and regenerate its client.'

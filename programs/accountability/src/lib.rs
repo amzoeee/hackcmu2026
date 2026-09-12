@@ -3,7 +3,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("4wJH64VGkp4kLPMFGU9p9q2cLKjThDsUaYY2WAJS7jJ9");
+declare_id!("EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb");
 
 const MAX_TASK_LENGTH: usize = 160;
 const MAX_PARTICIPANTS: usize = 10;

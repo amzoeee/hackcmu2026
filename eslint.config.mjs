@@ -7,6 +7,7 @@ export default defineConfig([
   ...nextTs,
   globalIgnores([
     ".next/**",
+    ".next-local/**",
     "next-env.d.ts",
     ".tools/**",
     ".anchor/**",
