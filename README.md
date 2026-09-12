@@ -107,22 +107,22 @@ The frontend uses **devnet**. Automated program tests use **localnet**, a tempor
 
 ## 5. Which files should I edit?
 
-| What you want to change                           | File                                 |
-| ------------------------------------------------- | ------------------------------------ |
-| Main page selection                                | `src/app/page.tsx`                   |
-| Create-pot form, pot list, and transaction UI     | `src/components/solara-app.tsx`      |
+| What you want to change                           | File                                   |
+| ------------------------------------------------- | -------------------------------------- |
+| Main page selection                               | `src/app/page.tsx`                     |
+| Create-pot form, pot list, and transaction UI     | `src/components/solara-app.tsx`        |
 | Embedded and browser wallet paths                 | `src/components/wallet-experience.tsx` |
-| Colors, spacing, and layout styles                | `src/app/globals.css`                |
-| App-wide layout and page title                    | `src/app/layout.tsx`                 |
-| Wallet connection setup                           | `src/components/wallet-provider.tsx` |
-| Anchor client used to call the program            | `src/lib/anchor/client.ts`           |
-| Default Solana RPC endpoint                       | `src/lib/solana.ts`                  |
-| On-chain logic: add create, join, and settle here | `programs/accountability/src/lib.rs` |
-| Rust dependencies                                 | `programs/accountability/Cargo.toml` |
-| Program tests                                     | `tests/accountability.test.ts`       |
-| Anchor network, wallet, and program addresses     | `Anchor.toml`                        |
-| JavaScript dependencies and npm commands          | `package.json`                       |
-| Requirements for the finished prototype           | `AGENTS.md`                          |
+| Colors, spacing, and layout styles                | `src/app/globals.css`                  |
+| App-wide layout and page title                    | `src/app/layout.tsx`                   |
+| Wallet connection setup                           | `src/components/wallet-provider.tsx`   |
+| Anchor client used to call the program            | `src/lib/anchor/client.ts`             |
+| Default Solana RPC endpoint                       | `src/lib/solana.ts`                    |
+| On-chain logic: add create, join, and settle here | `programs/accountability/src/lib.rs`   |
+| Rust dependencies                                 | `programs/accountability/Cargo.toml`   |
+| Program tests                                     | `tests/accountability.test.ts`         |
+| Anchor network, wallet, and program addresses     | `Anchor.toml`                          |
+| JavaScript dependencies and npm commands          | `package.json`                         |
+| Requirements for the finished prototype           | `AGENTS.md`                            |
 
 **Do not edit `src/lib/anchor/generated/` by hand.** Run `npm run anchor:build` after changing the Rust program to regenerate these files. Keep the generated files in Git so the frontend can build without a Rust setup.
 
