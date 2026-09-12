@@ -60,7 +60,8 @@ pub mod accountability {
         pot.settled = false;
         pot.outcome = None;
         pot.proof_uri = String::new();
-        // The client hashes the invite code with SHA-256; the program stores that hash as given.
+        // The client hashes the pot address together with the invite code; the
+        // program stores that hash as given. See `access_code_hash`.
         pot.access_hash = access_hash;
         Ok(())
     }
@@ -136,7 +137,7 @@ pub mod accountability {
                 .as_deref()
                 .ok_or(AccountabilityError::InvalidAccessCode)?;
             require!(
-                hash(code.as_bytes()).to_bytes() == expected,
+                access_code_hash(&pot.key(), code) == expected,
                 AccountabilityError::InvalidAccessCode
             );
         }
@@ -278,6 +279,19 @@ fn pay_recipients(
         **account.try_borrow_mut_lamports()? += payout;
     }
     Ok(())
+}
+
+/// Invite-code hashes are bound to the pot they gate, so a hash cannot be
+/// replayed against another pot and one table of precomputed hashes cannot
+/// cover every pot. The code itself travels as plain instruction data, so the
+/// first join publishes it on the ledger for good: generate codes with
+/// `createInviteCode` rather than choosing memorable ones, and treat the gate
+/// as a barrier to casual discovery, not a secret.
+fn access_code_hash(pot: &Pubkey, code: &str) -> [u8; 32] {
+    let mut input = Vec::with_capacity(32 + code.len());
+    input.extend_from_slice(pot.as_ref());
+    input.extend_from_slice(code.as_bytes());
+    hash(&input).to_bytes()
 }
 
 #[derive(Accounts)]

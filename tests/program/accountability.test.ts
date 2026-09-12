@@ -17,9 +17,9 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { Accountability } from "../../src/lib/anchor/generated/accountability";
+import { inviteCodeHash } from "../../src/lib/invite-code";
 import {
   encodeGroupTask,
   packGroupTransactions,
@@ -73,7 +73,7 @@ describe("accountability pots", () => {
     creator: Keypair,
     judge: PublicKey,
     deadlineOffsetSeconds = 6,
-    options: { task?: string; stake?: number; accessHash?: number[] } = {},
+    options: { task?: string; stake?: number; accessCode?: string } = {},
   ) {
     const id = identifier++;
     const deadline = (await chainTime()) + deadlineOffsetSeconds;
@@ -86,6 +86,10 @@ describe("accountability pots", () => {
       ],
       program.programId,
     );
+    // The hash is bound to the pot address, so it is computed after derivation.
+    const accessHash = options.accessCode
+      ? await inviteCodeHash(pot, options.accessCode)
+      : null;
     await program.methods
       .createPot(
         new BN(id),
@@ -93,7 +97,7 @@ describe("accountability pots", () => {
         new BN(options.stake ?? STAKE),
         new BN(deadline),
         judge,
-        options.accessHash ?? null,
+        accessHash,
       )
       .accountsPartial({
         creator: creator.publicKey,
@@ -102,7 +106,7 @@ describe("accountability pots", () => {
       })
       .signers([creator])
       .rpc();
-    return { pot, deadline, task };
+    return { pot, deadline, task, accessHash };
   }
 
   async function join(
@@ -186,10 +190,6 @@ describe("accountability pots", () => {
     const before = await snapshot(pot, wallets);
     await rejectsProgramError(action(), code);
     assert.deepEqual(await snapshot(pot, wallets), before);
-  }
-
-  function accessHashFor(code: string) {
-    return Array.from(createHash("sha256").update(code).digest());
   }
 
   async function submitProof(pot: PublicKey, submitter: Keypair, uri: string) {
@@ -312,6 +312,7 @@ describe("accountability pots", () => {
               new BN(STAKE),
               deadline,
               invalid === "judge" ? pot : creator.publicKey,
+              null,
             )
             .accountsPartial({
               creator: creator.publicKey,
@@ -414,7 +415,7 @@ describe("accountability pots", () => {
       const code = "full-house";
       const { pot, deadline } = await createPot(judge, judge.publicKey, 12, {
         task: "🙂".repeat(40),
-        accessHash: accessHashFor(code),
+        accessCode: code,
       });
       const rentReserve = await provider.connection.getBalance(pot);
       const accountInfo = await provider.connection.getAccountInfo(pot);
@@ -492,10 +493,10 @@ describe("accountability pots", () => {
       ...yesParticipants.map((wallet) => fund(wallet)),
       ...noWinners.map((wallet) => fund(wallet)),
     ]);
-    const code = "mixed";
+    const code = "mixed-sides";
     const { pot, deadline } = await createPot(judge, judge.publicKey, 12, {
       task: "x".repeat(160),
-      accessHash: accessHashFor(code),
+      accessCode: code,
     });
     const rentReserve = await provider.connection.getBalance(pot);
     for (const participant of yesParticipants)
@@ -918,10 +919,12 @@ describe("accountability pots", () => {
       fund(guest),
     ]);
     const code = "open-sesame";
-    const accessHash = accessHashFor(code);
-    const { pot, deadline } = await createPot(creator, creator.publicKey, 8, {
-      accessHash,
-    });
+    const { pot, deadline, accessHash } = await createPot(
+      creator,
+      creator.publicKey,
+      8,
+      { accessCode: code },
+    );
     assert.deepEqual(
       (await program.account.pot.fetch(pot)).accessHash,
       accessHash,
@@ -972,10 +975,24 @@ describe("accountability pots", () => {
       "AlreadyParticipating",
     );
 
+    // The same code opens no other pot, because the hash covers the address.
+    const twin = await createPot(creator, creator.publicKey, 8, {
+      accessCode: code,
+    });
+    assert.notDeepEqual(
+      (await program.account.pot.fetch(twin.pot)).accessHash,
+      accessHash,
+    );
+    await rejectsProgramError(
+      join(twin.pot, guest, "yes", "open-sesame-elsewhere"),
+      "InvalidAccessCode",
+    );
+    await join(twin.pot, guest, "yes", code);
+
     // A 64-byte code is the longest accepted.
     const longCode = "k".repeat(64);
     const longGated = await createPot(creator, creator.publicKey, 8, {
-      accessHash: accessHashFor(longCode),
+      accessCode: longCode,
     });
     await join(longGated.pot, guest, "no", longCode);
     assert.equal(
@@ -986,7 +1003,7 @@ describe("accountability pots", () => {
     // Open pots ignore any supplied code.
     const open = await createPot(creator, creator.publicKey);
     assert.equal((await program.account.pot.fetch(open.pot)).accessHash, null);
-    await join(open.pot, guest, "yes", "anything");
+    await join(open.pot, guest, "yes", "anything-at-all");
     assert.equal(
       (await program.account.pot.fetch(open.pot)).yesParticipants.length,
       1,
@@ -1128,6 +1145,7 @@ describe("accountability pots", () => {
             new BN(STAKE),
             new BN(deadline),
             organizer.publicKey,
+            null,
           )
           .accountsPartial({
             creator: organizer.publicKey,
