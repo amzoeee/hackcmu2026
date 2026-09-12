@@ -1,8 +1,18 @@
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
 import type { AnchorWallet } from "@solana/wallet-adapter-react";
-import { SystemProgram, type Connection } from "@solana/web3.js";
+import { Connection, SystemProgram } from "@solana/web3.js";
 import idl from "./generated/accountability.json";
 import type { Accountability } from "./generated/accountability";
+
+/** Bound public reads without interrupting wallet approval or transaction submission. */
+export function getReadOnlyConnection(endpoint: string) {
+  return new Connection(endpoint, {
+    commitment: "confirmed",
+    disableRetryOnRateLimit: true,
+    fetch: (url, options) =>
+      fetch(url, { ...options, signal: AbortSignal.timeout(15_000) }),
+  });
+}
 
 /** The generated IDL is the source of truth for the program address and API. */
 export function getAccountabilityProgram(

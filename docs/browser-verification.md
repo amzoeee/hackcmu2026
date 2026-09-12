@@ -43,6 +43,10 @@ After reducing the account allocation, a fresh UI rehearsal created a 599-byte p
 
 The judge paid only the settlement fee, and the participant received the full staked pool. Both browsers displayed the outcome and updated balances automatically. Earlier balance tables above used the original, larger account allocation; devnet rent may differ from the local validator's rent.
 
+## Slow connection recovery
+
+A controlled RPC proxy delayed reads by ten seconds, then stopped answering, then recovered. Browser checks confirmed that slow responses rendered despite the eight-second poll interval, stalled reads ended after fifteen seconds, the refresh control became available, and the last loaded pot stayed visible. Restoring the connection cleared the error. Separate form checks rejected a 164-byte emoji task, an invalid judge address, and a past deadline without moving SOL.
+
 ## Local ledger identifiers
 
 - Wallet A: `4h7yKVVWgYqkLcGoGLzXSFmQVpyDBzh1LuZvfubgsjdX`
