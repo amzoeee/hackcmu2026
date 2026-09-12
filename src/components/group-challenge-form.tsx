@@ -92,6 +92,7 @@ export function GroupChallengeForm({
   const [verified, setVerified] = useState(false);
   const [loadedKey, setLoadedKey] = useState("");
   const [storageError, setStorageError] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [rent, setRent] = useState<number | null>(null);
   const [progress, setProgress] = useState("");
   const running = useRef(false);
@@ -113,6 +114,7 @@ export function GroupChallengeForm({
       setVerified(false);
       setProgress("");
       setStorageError(false);
+      setConfirmLeave(false);
       try {
         const saved = window.localStorage.getItem(storageKey);
         if (saved) {
@@ -187,6 +189,9 @@ export function GroupChallengeForm({
     /* Show the estimate when the amount is valid. */
   }
   const estimatedFees = BigInt(count * 2 * 5_000);
+  const unstakedPots =
+    activePlan?.entries.filter((entry) => entry.created && !entry.joined)
+      .length ?? 0;
   const friendBytes = friends.map((friend) =>
     groupTaskBytes(friend.participant, friend.task),
   );
@@ -556,10 +561,14 @@ export function GroupChallengeForm({
 
   function startAnother() {
     if (pending || activePlan?.pending) return;
+    // Abandoning created pots before the organizer stakes leaves each friend
+    // betting against a judge with nothing at risk, so ask once.
+    if (unstakedPots > 0 && !confirmLeave) return setConfirmLeave(true);
     window.localStorage.removeItem(storageKey);
     setPlan(null);
     setVerified(false);
     setStorageError(false);
+    setConfirmLeave(false);
     setProgress("");
   }
 
@@ -845,6 +854,16 @@ export function GroupChallengeForm({
             Copy group link
           </button>
         ) : null}
+        {confirmLeave && unstakedPots > 0 ? (
+          <p className="risk-note" role="alert">
+            {unstakedPots === 1
+              ? "One created pot has no stake from you."
+              : `${unstakedPots} created pots have no stake from you.`}{" "}
+            A friend who joins YES there would be staking against a judge with
+            nothing at risk, and a “not completed” verdict on an unopposed pot
+            pays their stake to the judge. Resume instead to add your NO stakes.
+          </p>
+        ) : null}
         {complete || (activePlan && !activePlan.pending) ? (
           <button
             className="text-button"
@@ -854,7 +873,9 @@ export function GroupChallengeForm({
           >
             {complete
               ? "Start another group"
-              : "Leave these pots and start another group"}
+              : confirmLeave && unstakedPots > 0
+                ? "Leave them anyway"
+                : "Leave these pots and start another group"}
           </button>
         ) : null}
       </form>
