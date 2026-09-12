@@ -24,6 +24,7 @@ import {
   keypairAnchorWallet,
   loadDemoKeypair,
 } from "@/lib/demo-wallet";
+import { DEMO_WALLETS_ENABLED, IS_LOCALNET, SOLANA_NETWORK } from "@/lib/solana";
 import { SolaraApp } from "./solara-app";
 
 async function requestDemoFunds(address: string) {
@@ -32,12 +33,14 @@ async function requestDemoFunds(address: string) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ address }),
   });
-  const result = (await response.json()) as {
+  const result = (await response.json().catch(() => ({}))) as {
     error?: string;
     message?: string;
   };
   if (!response.ok)
-    throw new Error(result.error || "Could not add devnet SOL.");
+    throw new Error(
+      result.error || "Could not add test SOL. Please try again in a moment.",
+    );
   return result.message || "The demo wallet is funded.";
 }
 
@@ -47,6 +50,9 @@ function embeddedAnchorWallet(
   const signTransaction = async <T extends Transaction | VersionedTransaction>(
     transaction: T,
   ): Promise<T> => {
+    if (SOLANA_NETWORK !== "devnet") {
+      throw new Error("Embedded wallets are available on devnet only.");
+    }
     const serialized =
       transaction instanceof Transaction
         ? transaction.serialize({
@@ -93,7 +99,7 @@ export function ExternalWalletExperience() {
       onConnect={() => setVisible(true)}
       onDisconnect={wallet.disconnect}
       onRequestFunds={
-        wallet.publicKey
+        DEMO_WALLETS_ENABLED && wallet.publicKey
           ? () => requestDemoFunds(wallet.publicKey!.toBase58())
           : undefined
       }
@@ -142,6 +148,7 @@ export function EmbeddedWalletExperience() {
 }
 
 type DemoMode = "demo" | "external" | null;
+const DEMO_MODE_KEY = `solara.${SOLANA_NETWORK}.wallet-mode`;
 
 export function DemoWalletExperience() {
   const { connection } = useConnection();
@@ -153,6 +160,17 @@ export function DemoWalletExperience() {
 
   useEffect(() => {
     const restore = window.setTimeout(() => {
+      let savedMode: string | null = null;
+      try {
+        savedMode = window.localStorage.getItem(DEMO_MODE_KEY);
+      } catch {
+        // The connect action explains unavailable storage if a demo is started.
+      }
+      if (savedMode === "disconnected") return;
+      if (savedMode === "external" && SOLANA_NETWORK === "devnet") {
+        setMode("external");
+        return;
+      }
       const saved = loadDemoKeypair();
       if (saved) {
         setDemoKeypair(saved);
@@ -171,18 +189,33 @@ export function DemoWalletExperience() {
 
   async function startDemo() {
     const keypair = getOrCreateDemoKeypair();
+    try {
+      window.localStorage.setItem(DEMO_MODE_KEY, "demo");
+    } catch {
+      // The key is already safely stored; this preference is optional.
+    }
     setDemoKeypair(keypair);
     setMode("demo");
     await requestDemoFunds(keypair.publicKey.toBase58());
   }
 
   function connectExternalWallet() {
+    try {
+      window.localStorage.setItem(DEMO_MODE_KEY, "external");
+    } catch {
+      // An extension manages its own storage and can still connect.
+    }
     setMode("external");
     setVisible(true);
   }
 
   async function disconnect() {
     if (mode === "external") await adapterWallet.disconnect();
+    try {
+      window.localStorage.setItem(DEMO_MODE_KEY, "disconnected");
+    } catch {
+      // Keep sign-out available when browser storage is disabled.
+    }
     setDemoKeypair(null);
     setMode(null);
   }
@@ -196,17 +229,20 @@ export function DemoWalletExperience() {
       walletLabel={
         mode === "external"
           ? adapterWallet.wallet?.adapter.name || "browser wallet"
-          : "this browser's demo wallet"
+          : IS_LOCALNET
+            ? "this browser's local rehearsal wallet"
+            : "this browser's demo wallet"
       }
       onConnect={startDemo}
-      onDisconnect={() => void disconnect()}
+      onDisconnect={disconnect}
       onRequestFunds={
         mode === "demo" && address ? () => requestDemoFunds(address) : undefined
       }
-      secondaryConnect={{
-        label: "Use wallet extension",
-        onClick: connectExternalWallet,
-      }}
+      secondaryConnect={
+        SOLANA_NETWORK === "devnet"
+          ? { label: "Use wallet extension", onClick: connectExternalWallet }
+          : undefined
+      }
     />
   );
 }
