@@ -71,11 +71,21 @@ function shorten(address: string) {
 }
 
 function formatSol(lamports: BN | bigint | number) {
-  const value = Number(asBigInt(lamports)) / LAMPORTS_PER_SOL;
-  return value.toLocaleString(undefined, {
+  const amount = asBigInt(lamports);
+  const whole = amount / ONE_SOL;
+  const remainder = amount % ONE_SOL;
+  const formatter = new Intl.NumberFormat(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 9,
   });
+  const fraction = formatter
+    .formatToParts(
+      Number(remainder < 0n ? -remainder : remainder) / LAMPORTS_PER_SOL,
+    )
+    .filter(({ type }) => type === "decimal" || type === "fraction")
+    .map(({ value }) => value)
+    .join("");
+  return `${formatter.format(amount < 0n && whole === 0n ? -0 : whole)}${fraction}`;
 }
 
 function parseSol(value: string) {

@@ -104,9 +104,13 @@ export function DemoWalletExperience() {
     } catch {
       // The key is already safely stored; this preference is optional.
     }
-    setDemoKeypair(keypair);
-    setMode("demo");
-    await requestDemoFunds(keypair.publicKey.toBase58());
+    try {
+      await requestDemoFunds(keypair.publicKey.toBase58());
+    } finally {
+      // The first balance read should follow funding, including failed attempts.
+      setDemoKeypair(keypair);
+      setMode("demo");
+    }
   }
 
   function connectExternalWallet() {
