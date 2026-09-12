@@ -679,8 +679,18 @@ export function FinanceYourResponsibilitiesApp({
 
   const taskBytes = new TextEncoder().encode(task.trim()).length;
 
+  // Parsing decodes and re-encodes a base58 key, and the clock re-renders this
+  // list every second, so parse each task once per loaded set of pots.
+  const groupTags = useMemo(
+    () =>
+      new Map(
+        pots.map((pot) => [pot.publicKey.toBase58(), parseGroupTask(pot.task)]),
+      ),
+    [pots],
+  );
+
   const visiblePots = pots.filter((pot) => {
-    const group = parseGroupTask(pot.task);
+    const group = groupTags.get(pot.publicKey.toBase58());
     if (
       groupFilter &&
       `${pot.creator.toBase58()}:${group?.groupId}` !== groupFilter
@@ -1120,7 +1130,7 @@ export function FinanceYourResponsibilitiesApp({
           ) : null}
           <div className="pot-list">
             {visiblePots.map((pot) => {
-              const group = parseGroupTask(pot.task);
+              const group = groupTags.get(pot.publicKey.toBase58());
               const displayTask = group?.task ?? pot.task;
               const joinedYes = address
                 ? pot.yesParticipants.some(
