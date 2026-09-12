@@ -1,8 +1,34 @@
 # Browser verification — 2026-09-12
 
-The complete flow was exercised through the interface on an isolated local Solana validator using `npm run demo:local`. Wallet A used the Codex browser, and wallet B used Chrome. This verifies the local rehearsal; deployment and the same UI flow on devnet remain pending devnet funding.
+The complete flow passed through the production interface on Solana devnet using `npm run demo:devnet -- --production`. Wallet A used the Codex browser, and wallet B used Chrome with separate browser storage. The local rehearsals and recovery checks are recorded below.
 
-## Observed balances
+## Devnet presentation verification
+
+The [deployed program](https://explorer.solana.com/address/EE5h4kXh8Pk2ECthCABpK7bLQ934n4TZjkRsuDgskYBb?cluster=devnet) matches the tested local binary byte for byte. Its Anchor IDL contains all three instructions. Both browser profiles received 0.25 devnet SOL through **Start demo**, using the server-only funded deployer.
+
+A created **Present Solara's live devnet demo** with a 0.01 SOL fixed stake, a two-minute deadline, and A's address explicitly named as judge. A joined YES; B joined NO. Only A received settlement controls after the deadline. A reviewed the 0.02 SOL payout and confirmed **Completed**. Both browsers displayed the settled result and their personal outcomes automatically, with no console warnings or errors observed.
+
+| UI action                               | Wallet A (SOL) | Wallet B (SOL) |
+| --------------------------------------- | -------------: | -------------: |
+| Both wallets funded                     |     0.25000000 |     0.25000000 |
+| A creates pot                           |     0.24630184 |     0.25000000 |
+| A joins YES                             |     0.23629684 |     0.25000000 |
+| B joins NO                              |     0.23629684 |     0.23999500 |
+| A confirms Completed after the deadline |     0.25629184 |     0.23999500 |
+
+The 599-byte pot retained **0.00369316 SOL** in devnet rent. The full **0.02 SOL** staked pool reached A, less A's **0.000005 SOL** settlement fee. Creation and both joins also charged 0.000005 SOL each. All four transactions are finalized; the [captured RPC evidence](devnet-verification.json) records their metadata, balances, and accounting checks. Devnet's rent differs from the local validator's rent in the older tables below.
+
+- Wallet A: `43TckunhN3PUrEk4yNaNKd9BKk6vZCK3j1EmprpFWvgU`
+- Wallet B: `3PiWQaPdZwHhLJyhCF5Zz53NezmMtjSRMyzTMWU8zmdy`
+- [Pot record](https://explorer.solana.com/address/EGHmh5gFdTwLeYm1gDphWJGc2vX8Fdt5h4T3QjtYCuRB?cluster=devnet)
+- [Create transaction](https://explorer.solana.com/tx/39WknqjmHdNrqfvnQZEfR1w6ye4HHFnaXaRfTXg3FHYnr9QTLJX9VE9dpL2jj4VTn6PMiMzz5JGdpa1Xs1HFRNsR?cluster=devnet)
+- [A joins YES](https://explorer.solana.com/tx/4J6Hheqxr3x1i4XyaEFbjuKUPFRSQmQK5b9qEDNB2kyRXxSo4jouQbjbJcHBZCL4N94g8kHwBK8VHhgRVex33JM5?cluster=devnet)
+- [B joins NO](https://explorer.solana.com/tx/3VyRJzdFEs8s2h7rBVvNdaN5xjSKmBiaJaSXryGEVtbTCSUrNoEcG2NSQesKhUUKG6HvLGcNS2BLGJDYQ1rPkA3J?cluster=devnet)
+- [Settlement and payout](https://explorer.solana.com/tx/5PKjAjUofHpqujssudUAYc89wZhb4rsCPr6L25pXTMoAN7zv4UHtmwukEGdu9UonM8BnKn2ugZDYXvS4v6yhAuES?cluster=devnet)
+
+This run used two browser profiles on one computer. The optional Privy and extension signing paths, and a second physical device on the LAN, were not part of this verification.
+
+## Original local rehearsal balances
 
 Both profiles created separate browser wallets and received 0.25 local test SOL through **Start demo**. A created the pot and named itself judge. The fixed stake was 0.01 SOL.
 
@@ -65,7 +91,7 @@ The compiled production app also passed the full two-profile flow on localnet wi
 
 A repeat with the updated payout text verified that the review and winner receipt both identify the 0.02 SOL share as including the original stake. Sharing from a URL containing a query string produced a clean pot link without that query string and retained the local-sharing guidance.
 
-Opening the production devnet page through the host's HTTP LAN address verified browser-wallet creation, restoration after reload, and the manual address-copy fallback when clipboard access was unavailable. This check used the same computer and a disabled test funder; a second physical device and the full devnet staking flow remain unverified.
+Opening the production devnet page through the host's HTTP LAN address verified browser-wallet creation, restoration after reload, and the manual address-copy fallback when clipboard access was unavailable. That check used the same computer and a disabled test funder; a second physical device remains unverified. The complete funded devnet flow later passed on loopback as recorded above.
 
 ## Full-capacity browser rehearsal
 
@@ -102,4 +128,4 @@ Pot: `229JzQiATqe9SJ9FaiLM4j591nUqn1VnB8vP7owXbCsz`. Settlement: `3Fpat7Jsj6Pay3
 - Pot: `EKKfR5dpXqkDyGWswroCwg6d5sV2jt2TSrh9YEwHdNez`
 - Settlement: `3wUWQPLNwUd8C8G9Ge3QwBLjYAX3QN91BYx56PnwM6qVXDgSM2fVY8ytj6kexk9NBv6EkqbfsBP5xr2795fD9w8P`
 
-These are local ledger records, not public devnet transactions. The rehearsal ledger is discarded when the command stops. Repeat the flow on devnet with funded wallets before calling the presentation ready.
+These identifiers belong to the original local ledger, which is discarded when its rehearsal command stops. The public devnet proof is recorded at the top of this document. Before a presentation, check the funder reserve and both participant balances.
