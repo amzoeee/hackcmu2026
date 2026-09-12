@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { setTimeout } from "node:timers/promises";
-import { AnchorProvider, BN, Program, setProvider } from "@coral-xyz/anchor";
+import {
+  AnchorError,
+  AnchorProvider,
+  BN,
+  Program,
+  setProvider,
+} from "@coral-xyz/anchor";
 import {
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
+  SYSVAR_CLOCK_PUBKEY,
   SystemProgram,
 } from "@solana/web3.js";
 import { readFileSync } from "node:fs";
@@ -22,6 +29,20 @@ describe("accountability pots", () => {
   const program = new Program<Accountability>(idl, provider);
   let identifier = 1;
 
+  async function chainTime() {
+    const clock = await provider.connection.getAccountInfo(SYSVAR_CLOCK_PUBKEY);
+    assert.ok(clock, "The validator must expose the Clock sysvar");
+    return Number(clock.data.readBigInt64LE(32));
+  }
+
+  async function rejectsProgramError(action: Promise<unknown>, code: string) {
+    await assert.rejects(action, (error: unknown) => {
+      assert.ok(error instanceof AnchorError);
+      assert.equal(error.error.errorCode.code, code);
+      return true;
+    });
+  }
+
   async function fund(wallet: Keypair, amount = LAMPORTS_PER_SOL) {
     const signature = await provider.connection.requestAirdrop(
       wallet.publicKey,
@@ -33,11 +54,11 @@ describe("accountability pots", () => {
   async function createPot(
     creator: Keypair,
     judge: PublicKey,
-    deadlineOffsetSeconds = 3,
+    deadlineOffsetSeconds = 6,
     options: { task?: string; stake?: number } = {},
   ) {
     const id = identifier++;
-    const deadline = Math.floor(Date.now() / 1000) + deadlineOffsetSeconds;
+    const deadline = (await chainTime()) + deadlineOffsetSeconds;
     const task = options.task ?? `Task ${id}`;
     const [pot] = PublicKey.findProgramAddressSync(
       [
@@ -86,6 +107,7 @@ describe("accountability pots", () => {
     judge: Keypair,
     completed: boolean,
     recipients: PublicKey[],
+    writable = true,
   ) {
     await program.methods
       .settlePot(completed)
@@ -94,7 +116,7 @@ describe("accountability pots", () => {
         recipients.map((pubkey) => ({
           pubkey,
           isSigner: false,
-          isWritable: true,
+          isWritable: writable,
         })),
       )
       .signers([judge])
@@ -102,31 +124,62 @@ describe("accountability pots", () => {
   }
 
   async function waitForDeadline(deadline: number) {
-    // The local validator's Clock sysvar can trail wall time by a few slots.
-    const milliseconds = Math.max(0, deadline * 1000 - Date.now() + 3_500);
-    await setTimeout(milliseconds);
+    // Use the same Clock sysvar as the program, rather than assuming the
+    // validator's clock matches the machine running these tests.
+    const timeout = Date.now() + 30_000;
+    while ((await chainTime()) < deadline) {
+      assert.ok(
+        Date.now() < timeout,
+        "Validator clock did not reach the deadline",
+      );
+      await setTimeout(200);
+    }
   }
 
   it("rejects invalid pot definitions", async () => {
     const creator = Keypair.generate();
     await fund(creator, 3 * LAMPORTS_PER_SOL);
 
-    await assert.rejects(
+    await rejectsProgramError(
       createPot(creator, creator.publicKey, 3, { task: "" }),
-      /description|required|custom program error/i,
+      "TaskRequired",
     );
-    await assert.rejects(
+    await rejectsProgramError(
+      createPot(creator, creator.publicKey, 3, { task: " \n\t " }),
+      "TaskRequired",
+    );
+    await rejectsProgramError(
       createPot(creator, creator.publicKey, 3, { task: "x".repeat(161) }),
-      /too long|custom program error/i,
+      "TaskTooLong",
     );
-    await assert.rejects(
+    await rejectsProgramError(
+      createPot(creator, creator.publicKey, 3, { task: "🙂".repeat(41) }),
+      "TaskTooLong",
+    );
+    await rejectsProgramError(
       createPot(creator, creator.publicKey, 3, { stake: 0 }),
-      /greater than zero|custom program error/i,
+      "InvalidStake",
     );
-    await assert.rejects(
+    await rejectsProgramError(
       createPot(creator, creator.publicKey, -1),
-      /future|custom program error/i,
+      "DeadlineMustBeFuture",
     );
+  });
+
+  it("stores a task at the UTF-8 limit and lets one creator create distinct pots", async () => {
+    const creator = Keypair.generate();
+    await fund(creator);
+    const task = "🙂".repeat(40);
+    const first = await createPot(creator, creator.publicKey, 6, { task });
+    const second = await createPot(creator, creator.publicKey);
+    assert.notEqual(first.pot.toBase58(), second.pot.toBase58());
+    const account = await program.account.pot.fetch(first.pot);
+    assert.equal(account.task, task);
+    assert.equal(account.creator.toBase58(), creator.publicKey.toBase58());
+    assert.equal(account.judge.toBase58(), creator.publicKey.toBase58());
+    assert.equal(account.noParticipants.length, 0);
+    assert.equal(account.settled, false);
+    assert.equal(account.outcome, null);
   });
 
   it("creates a pot, rejects duplicate joins and pays the selected side", async () => {
@@ -146,15 +199,26 @@ describe("accountability pots", () => {
     assert.equal(created.stake.toString(), String(STAKE));
     assert.equal(created.yesParticipants.length, 0);
 
+    const beforeYes = await provider.connection.getBalance(yes.publicKey);
+    const beforeNo = await provider.connection.getBalance(no.publicKey);
     await join(pot, yes, "yes");
     await join(pot, no, "no");
-    await assert.rejects(
-      join(pot, yes, "no"),
-      /already joined|custom program error/i,
+    assert.equal(
+      await provider.connection.getBalance(yes.publicKey),
+      beforeYes - STAKE,
     );
-    await assert.rejects(
+    assert.equal(
+      await provider.connection.getBalance(no.publicKey),
+      beforeNo - STAKE,
+    );
+    assert.equal(
+      await provider.connection.getBalance(pot),
+      rentReserve + STAKE * 2,
+    );
+    await rejectsProgramError(join(pot, yes, "no"), "AlreadyParticipating");
+    await rejectsProgramError(
       settle(pot, creator, true, [yes.publicKey]),
-      /deadline|custom program error/i,
+      "DeadlineNotReached",
     );
 
     const beforeWinner = await provider.connection.getBalance(yes.publicKey);
@@ -168,33 +232,70 @@ describe("accountability pots", () => {
       beforeWinner + STAKE * 2,
     );
     assert.equal(await provider.connection.getBalance(pot), rentReserve);
-    await assert.rejects(
+    await rejectsProgramError(
       settle(pot, creator, true, [yes.publicKey]),
-      /settled|custom program error/i,
+      "PotSettled",
     );
+    await rejectsProgramError(join(pot, creator, "yes"), "PotSettled");
   });
 
-  it("rejects more than ten participants", async () => {
+  it("rejects more than ten participants and refunds all ten including the judge", async () => {
     const judge = Keypair.generate();
-    const participants = Array.from({ length: 11 }, () => Keypair.generate());
+    const participants = [
+      judge,
+      ...Array.from({ length: 10 }, () => Keypair.generate()),
+    ];
     await Promise.all([
       fund(judge, 3 * LAMPORTS_PER_SOL),
-      ...participants.map((wallet) => fund(wallet)),
+      ...participants.slice(1).map((wallet) => fund(wallet)),
     ]);
-    const { pot } = await createPot(judge, judge.publicKey, 60);
+    const { pot, deadline } = await createPot(judge, judge.publicKey, 12);
+    const rentReserve = await provider.connection.getBalance(pot);
 
     for (const participant of participants.slice(0, 10)) {
-      await join(pot, participant, "yes");
+      await join(pot, participant, "no");
     }
-    await assert.rejects(
-      join(pot, participants[10], "no"),
-      /maximum number|full|custom program error/i,
-    );
+    await rejectsProgramError(join(pot, participants[10], "yes"), "PotFull");
     const account = await program.account.pot.fetch(pot);
     assert.equal(
       account.yesParticipants.length + account.noParticipants.length,
       10,
     );
+    const recipients = participants
+      .slice(0, 10)
+      .map((wallet) => wallet.publicKey);
+    const beforeRefunds = await Promise.all(
+      recipients.map((wallet) => provider.connection.getBalance(wallet)),
+    );
+    await waitForDeadline(deadline);
+    await settle(pot, judge, true, recipients);
+    for (const [index, wallet] of recipients.entries()) {
+      assert.equal(
+        await provider.connection.getBalance(wallet),
+        beforeRefunds[index] + STAKE,
+      );
+    }
+    assert.equal(await provider.connection.getBalance(pot), rentReserve);
+  });
+
+  it("does not record or charge a participant whose stake transfer fails", async () => {
+    const judge = Keypair.generate();
+    const participant = Keypair.generate();
+    await Promise.all([fund(judge), fund(participant, STAKE - 1)]);
+    const { pot } = await createPot(judge, judge.publicKey);
+    const beforePot = await provider.connection.getBalance(pot);
+    await assert.rejects(
+      join(pot, participant, "yes"),
+      /insufficient lamports/i,
+    );
+    assert.equal(
+      await provider.connection.getBalance(participant.publicKey),
+      STAKE - 1,
+    );
+    assert.equal(await provider.connection.getBalance(pot), beforePot);
+    const account = await program.account.pot.fetch(pot);
+    assert.equal(account.yesParticipants.length, 0);
+    assert.equal(account.noParticipants.length, 0);
   });
 
   it("pays a populated NO side and leaves rent plus division dust", async () => {
@@ -245,32 +346,73 @@ describe("accountability pots", () => {
   it("enforces judge authority, rejects bad recipient lists, and refunds one-sided pots", async () => {
     const judge = Keypair.generate();
     const participant = Keypair.generate();
+    const secondParticipant = Keypair.generate();
     const stranger = Keypair.generate();
     await Promise.all([
       fund(judge, 3 * LAMPORTS_PER_SOL),
       fund(participant),
+      fund(secondParticipant),
       fund(stranger),
     ]);
     const { pot, deadline } = await createPot(judge, judge.publicKey);
+    const rentReserve = await provider.connection.getBalance(pot);
     await join(pot, participant, "yes");
+    await join(pot, secondParticipant, "yes");
     await waitForDeadline(deadline);
 
-    await assert.rejects(
-      settle(pot, stranger, false, [participant.publicKey]),
-      /judge|custom program error/i,
+    const recipients = [participant.publicKey, secondParticipant.publicKey];
+    await rejectsProgramError(
+      settle(pot, stranger, false, recipients),
+      "UnauthorizedJudge",
     );
-    await assert.rejects(
+    await rejectsProgramError(
       settle(pot, judge, false, [stranger.publicKey]),
-      /recipient|custom program error/i,
+      "IncorrectRecipientCount",
+    );
+    await rejectsProgramError(
+      settle(pot, judge, false, [...recipients, stranger.publicKey]),
+      "IncorrectRecipientCount",
+    );
+    await rejectsProgramError(
+      settle(pot, judge, false, [
+        stranger.publicKey,
+        secondParticipant.publicKey,
+      ]),
+      "InvalidPayoutRecipient",
+    );
+    await rejectsProgramError(
+      settle(pot, judge, false, [...recipients].reverse()),
+      "InvalidPayoutRecipient",
+    );
+    await rejectsProgramError(
+      settle(pot, judge, false, [participant.publicKey, participant.publicKey]),
+      "InvalidPayoutRecipient",
+    );
+    await rejectsProgramError(
+      settle(pot, judge, false, recipients, false),
+      "RecipientNotWritable",
+    );
+    assert.equal((await program.account.pot.fetch(pot)).settled, false);
+    assert.equal(
+      await provider.connection.getBalance(pot),
+      rentReserve + STAKE * 2,
     );
     const beforeRefund = await provider.connection.getBalance(
       participant.publicKey,
     );
-    await settle(pot, judge, false, [participant.publicKey]);
+    const beforeSecondRefund = await provider.connection.getBalance(
+      secondParticipant.publicKey,
+    );
+    await settle(pot, judge, false, recipients);
     assert.equal(
       await provider.connection.getBalance(participant.publicKey),
       beforeRefund + STAKE,
     );
+    assert.equal(
+      await provider.connection.getBalance(secondParticipant.publicKey),
+      beforeSecondRefund + STAKE,
+    );
+    assert.equal(await provider.connection.getBalance(pot), rentReserve);
   });
 
   it("settles an empty pot without a payout and rejects late joins", async () => {
@@ -281,14 +423,16 @@ describe("accountability pots", () => {
       fund(lateParticipant),
     ]);
     const empty = await createPot(judge, judge.publicKey);
+    const rentReserve = await provider.connection.getBalance(empty.pot);
     await waitForDeadline(empty.deadline);
-    await assert.rejects(
+    await rejectsProgramError(
       join(empty.pot, lateParticipant, "yes"),
-      /deadline|custom program error/i,
+      "DeadlinePassed",
     );
     await settle(empty.pot, judge, true, []);
     const settled = await program.account.pot.fetch(empty.pot);
     assert.equal(settled.settled, true);
     assert.equal(settled.outcome, true);
+    assert.equal(await provider.connection.getBalance(empty.pot), rentReserve);
   });
 });
