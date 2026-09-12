@@ -531,8 +531,12 @@ export function GroupChallengeForm({
           /* Preserve the transaction error if storage also failed. */
         }
       }
+      // Nothing is saved until a draft exists, so do not promise recoverable
+      // progress for an error raised while validating the form.
       showProgress(
-        "Setup paused. Confirmed pots and stakes are saved; Resume checks the chain before continuing.",
+        active
+          ? "Setup paused. Confirmed pots and stakes are saved; Resume checks the chain before continuing."
+          : "",
       );
       if (error instanceof Error && active?.pending)
         Object.assign(error, { signature: active.pending.signature });
