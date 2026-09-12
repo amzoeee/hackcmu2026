@@ -2,6 +2,14 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
+NEXT_COMMAND=dev
+if [[ $# -eq 1 && "$1" == "--production" ]]; then
+  NEXT_COMMAND=start
+elif [[ $# -ne 0 ]]; then
+  echo "Usage: npm run demo:local [-- --production]" >&2
+  exit 1
+fi
+
 if [[ ! -f target/deploy/accountability.so ]]; then
   echo "Build the program first: npm run anchor:build"
   exit 1
@@ -97,12 +105,21 @@ echo "Local program ready. Open http://localhost:3001 in two browser profiles."
 echo "Use Start demo to receive local test SOL. Pots reset when this command stops."
 echo "This rehearsal uses localnet; the final presentation still requires devnet verification."
 
-NEXT_PUBLIC_SOLANA_NETWORK=localnet \
-NEXT_PUBLIC_SOLANA_RPC_URL=http://127.0.0.1:18999 \
-NEXT_PUBLIC_SOLANA_WS_URL=ws://127.0.0.1:19000 \
-NEXT_PUBLIC_PRIVY_APP_ID= \
-SOLARA_DEMO_FUNDER_KEYPAIR= \
-NEXT_DIST_DIR=.next-local \
-node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3001 &
+export NEXT_PUBLIC_SOLANA_NETWORK=localnet
+export NEXT_PUBLIC_SOLANA_RPC_URL=http://127.0.0.1:18999
+export NEXT_PUBLIC_SOLANA_WS_URL=ws://127.0.0.1:19000
+export NEXT_PUBLIC_PRIVY_APP_ID=
+export SOLARA_DEMO_FUNDER_KEYPAIR=
+export NEXT_DIST_DIR=.next-local
+
+if [[ "$NEXT_COMMAND" == "start" ]]; then
+  echo "Building the production interface for this local rehearsal."
+  node node_modules/next/dist/bin/next build &
+  NEXT_PID=$!
+  wait "$NEXT_PID"
+  NEXT_PID=""
+fi
+
+node node_modules/next/dist/bin/next "$NEXT_COMMAND" --hostname 127.0.0.1 --port 3001 &
 NEXT_PID=$!
 wait "$NEXT_PID"

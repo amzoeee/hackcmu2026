@@ -26,6 +26,8 @@ No database, Docker, separate backend, wallet extension, or real SOL is required
 npm run demo:local
 ```
 
+For the compiled interface without development controls, use `npm run demo:local -- --production`. It builds the local configuration before starting the same rehearsal.
+
 Open [http://localhost:3001](http://localhost:3001) in two separate browser profiles. The command starts an isolated local validator with the built program and a local-only web server. It uses its own build directory and does not change devnet environment settings. Press **Ctrl+C** to stop both processes and discard the temporary ledger; pots reset on the next run.
 
 1. In each profile, click **Start demo**. Each wallet receives 0.25 local test SOL.
